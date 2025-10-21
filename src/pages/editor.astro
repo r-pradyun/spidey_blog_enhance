@@ -410,21 +410,79 @@ import PageLayout from '@layouts/PageLayout.astro'
       }
 
       async function uploadImage(file) {
-        const form = new FormData();
-        form.append('slug', slugDisplay.textContent);
-        form.append('file', file);
-        const res = await fetch('/api/editor/upload', { method: 'POST', body: form });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data?.error || 'Upload failed');
+        try {
+          console.log('Starting upload process...');
+          console.log('File details:', {
+            name: file.name,
+            size: file.size,
+            type: file.type
+          });
+          
+          // Convert file to base64 using FileReader (more reliable)
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = reader.result;
+              // Remove data:image/...;base64, prefix
+              const base64Data = result.split(',')[1];
+              console.log('Base64 conversion successful, length:', base64Data.length);
+              resolve(base64Data);
+            };
+            reader.onerror = () => {
+              console.error('FileReader error:', reader.error);
+              reject(new Error('Failed to read file'));
+            };
+            reader.readAsDataURL(file);
+          });
+          
+          const payload = {
+            slug: slugDisplay.textContent,
+            filename: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            base64: base64
+          };
+          
+          console.log('Payload created:', {
+            slug: payload.slug,
+            filename: payload.filename,
+            fileType: payload.fileType,
+            fileSize: payload.fileSize,
+            base64Length: payload.base64.length
+          });
+          
+          const jsonPayload = JSON.stringify(payload);
+          console.log('JSON payload size:', jsonPayload.length);
+          console.log('JSON payload preview:', jsonPayload.substring(0, 200) + '...');
+          
+          const res = await fetch('/api/editor/upload', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: jsonPayload
+          });
+          
+          console.log('Upload response status:', res.status);
+          
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            console.error('Upload failed:', data);
+            throw new Error(data?.error || 'Upload failed');
+          }
+          
+          const data = await res.json();
+          console.log('Upload success:', data);
+          
+          if (data.message) {
+            showMessage(data.message);
+          }
+          
+          return data.url;
+        } catch (error) {
+          console.error('Upload error:', error);
+          throw error;
         }
-        const data = await res.json();
-        
-        if (data.message) {
-          showMessage(data.message);
-        }
-        
-        return data.url;
       }
 
       function insertAtCursor(text) {

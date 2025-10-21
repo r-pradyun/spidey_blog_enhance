@@ -13,7 +13,7 @@ export default defineConfig({
     solidJs(), 
     tailwind({ applyBaseStyles: false })
   ],
-  output: "hybrid",
+  output: "server",
   experimental: {
     contentCollectionCache: true
   }

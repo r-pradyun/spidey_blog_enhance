@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { GitHubAPI } from '../../lib/github'
+import { GitHubAPI } from '../../../lib/github'
 import matter from 'gray-matter'
 
 type RequestBody = {
@@ -154,8 +154,29 @@ export const POST: APIRoute = async ({ request }) => {
               try {
                 console.log(`📥 Processing image: ${image.filename}`)
                 
-                // Download image from Blob URL
-                const response = await fetch(image.blobUrl)
+                // Download image from Blob URL with timeout and retry
+                let response
+                let retries = 3
+                
+                while (retries > 0) {
+                  try {
+                    response = await fetch(image.blobUrl, {
+                      timeout: 15000, // 15 second timeout
+                      headers: {
+                        'User-Agent': 'Blog-Editor/1.0'
+                      }
+                    })
+                    break
+                  } catch (error) {
+                    retries--
+                    if (retries === 0) {
+                      console.error(`Failed to download image after 3 attempts: ${error}`)
+                      throw new Error(`Network timeout downloading image: ${error}`)
+                    }
+                    console.log(`Retry ${3 - retries} downloading image...`)
+                    await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
+                  }
+                }
                 
                 if (!response.ok) {
                   throw new Error(`Failed to download image: ${response.status} ${response.statusText}`)
@@ -222,6 +243,7 @@ export const POST: APIRoute = async ({ request }) => {
     // Try to write to GitHub first (this is the primary method)
     if (import.meta.env.GITHUB_TOKEN && import.meta.env.GITHUB_OWNER && import.meta.env.GITHUB_REPO) {
       try {
+        console.log('🔗 Attempting GitHub integration...')
         const github = new GitHubAPI(
           import.meta.env.GITHUB_TOKEN,
           import.meta.env.GITHUB_OWNER,
@@ -251,6 +273,7 @@ export const POST: APIRoute = async ({ request }) => {
         }
       } catch (error) {
         console.error('GitHub push error:', error)
+        console.log('⚠️ GitHub integration failed, continuing with local save only')
         // If GitHub fails, we'll try local write as fallback
       }
     }
