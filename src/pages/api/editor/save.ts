@@ -20,25 +20,16 @@ function toArrayOrUndefined(value: unknown): string[] | undefined {
 
 function buildFrontmatter(fm: Record<string, unknown>) {
   const fields: Record<string, unknown> = {}
+  
+  // Only include fields that are defined in the blog collection schema
   if (fm.title) fields.title = String(fm.title)
   if (fm.date) fields.date = String(fm.date)
-  const lastmod = String(fm.lastmod || '').trim()
-  if (lastmod) fields.lastmod = lastmod
   if (fm.draft !== undefined) fields.draft = Boolean(fm.draft)
   const summary = String(fm.summary || '').trim()
   if (summary) fields.summary = summary
   const tags = toArrayOrUndefined(fm.tags)
   if (tags) fields.tags = tags
-  const authors = toArrayOrUndefined(fm.authors)
-  if (authors) fields.authors = authors
-  const images = toArrayOrUndefined(fm.images)
-  if (images) fields.images = images
-  const layout = String(fm.layout || '').trim()
-  if (layout) fields.layout = layout
-  const bibliography = String(fm.bibliography || '').trim()
-  if (bibliography) fields.bibliography = bibliography
-  const canonicalUrl = String(fm.canonicalUrl || '').trim()
-  if (canonicalUrl) fields.canonicalUrl = canonicalUrl
+  
   return fields
 }
 
