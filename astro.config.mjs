@@ -15,7 +15,9 @@ export default defineConfig({
     tailwind({ applyBaseStyles: false })
   ],
   output: "server",
-  adapter: vercel(),
+  adapter: vercel({
+    runtime: 'nodejs20.x'
+  }),
   experimental: {
     contentCollectionCache: true
   }
