@@ -9,6 +9,7 @@ import ArticleBottomLayout from "@layouts/ArticleBottomLayout.astro"
 // Create the static blog pages
 export async function getStaticPaths() {
 	const posts = await getCollection("blog")
+	console.log("Available blog posts:", posts.map(p => ({ slug: p.slug, title: p.data.title })))
 	return posts.map((post) => ({
 		params: { slug: post.slug },
 		props: post,
@@ -18,6 +19,14 @@ export async function getStaticPaths() {
 // Get the requested post
 type Props = CollectionEntry<"blog">
 const post = Astro.props
+
+// Check if post exists
+if (!post || !post.data) {
+  console.error(`Blog post not found for slug: ${Astro.params.slug}`)
+  console.error("Post object:", post)
+  throw new Error(`Blog post not found: ${Astro.params.slug}`)
+}
+
 const { title, summary } = post.data
 ---
 
