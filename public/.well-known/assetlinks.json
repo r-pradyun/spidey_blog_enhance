@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.spidey.deeplink",
+    "sha256_cert_fingerprints": [
+      "53:0B:49:33:04:FF:39:71:97:E1:3C:3D:A1:D8:A8:D6:82:18:A3:8D:E3:D3:20:A4:31:DE:0C:3F:88:BB:D8:98"
+    ]
+  }
+}]
