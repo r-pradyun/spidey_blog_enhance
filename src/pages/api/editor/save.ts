@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro'
 import { GitHubAPI } from '../../../lib/github'
-import matter from 'gray-matter'
 
 type RequestBody = {
   frontmatter: Record<string, unknown>
@@ -121,7 +120,7 @@ export const POST: APIRoute = async ({ request }) => {
           let match
 
           while ((match = imageRegex.exec(content)) !== null) {
-            const [, alt, url] = match
+            const [, , url] = match
             
             // Check if this is a Vercel Blob URL
             if (url.includes('blob.vercel-storage.com') || url.includes('vercel-storage.com')) {
@@ -161,7 +160,6 @@ export const POST: APIRoute = async ({ request }) => {
                 while (retries > 0) {
                   try {
                     response = await fetch(image.blobUrl, {
-                      timeout: 15000, // 15 second timeout
                       headers: {
                         'User-Agent': 'Blog-Editor/1.0'
                       }
@@ -178,8 +176,8 @@ export const POST: APIRoute = async ({ request }) => {
                   }
                 }
                 
-                if (!response.ok) {
-                  throw new Error(`Failed to download image: ${response.status} ${response.statusText}`)
+                if (!response || !response.ok) {
+                  throw new Error(`Failed to download image: ${response?.status} ${response?.statusText}`)
                 }
                 
                 const imageBuffer = await response.arrayBuffer()
