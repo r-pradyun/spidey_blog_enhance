@@ -76,18 +76,9 @@ export const POST: APIRoute = async ({ request }) => {
       })
     }
 
-    const filename = `${slug}.mdx`
+    // Create folder structure: slug/index.md
+    const filename = `${slug}/index.md`
     const fm = buildFrontmatter(frontmatter)
-    const actorAuthor = getRequestAuthor(request)
-    if (actorAuthor) {
-      // Force authors to be the authenticated author only
-      fm.authors = [actorAuthor]
-    }
-    
-    // Add status and timestamps based on draft setting
-    fm.status = fm.draft ? 'draft' : 'published'
-    fm.createdAt = new Date().toISOString()
-    fm.updatedAt = new Date().toISOString()
     
     const fmText = serializeFrontmatter(fm)
     const content = `${fmText}\n\n${mdxBody || ''}\n`
@@ -275,15 +266,17 @@ export const POST: APIRoute = async ({ request }) => {
         const path = await import('path')
         
         // Determine the correct directory based on draft status
-        const dir = path.join(process.cwd(), 'src', 'content', 'blog', fm.draft ? 'drafts' : '')
+        const baseDir = path.join(process.cwd(), 'src', 'content', 'blog', fm.draft ? 'drafts' : '')
+        const filePath = path.join(baseDir, filename)
         
+        // Create the directory structure (including the slug folder)
+        const fileDir = path.dirname(filePath)
         try {
-          await fs.access(dir)
+          await fs.access(fileDir)
         } catch {
-          await fs.mkdir(dir, { recursive: true })
+          await fs.mkdir(fileDir, { recursive: true })
         }
 
-        const filePath = path.join(dir, filename)
         await fs.writeFile(filePath, processedContent, 'utf-8') // Use processedContent for local write (not base64)
         localWriteSuccess = true
         console.log('Successfully wrote locally:', filePath)
