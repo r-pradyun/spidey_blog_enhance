@@ -24,24 +24,20 @@ export const GET: APIRoute = async ({ request, url }) => {
     const fs = await import('fs/promises')
     const path = await import('path')
     
-    // Try to find the post in drafts first, then in published posts
-    const draftPath = path.join(process.cwd(), 'src', 'content', 'blog', 'drafts', `${slug}.mdx`)
-    const blogPath = path.join(process.cwd(), 'src', 'content', 'blog', `${slug}.mdx`)
+    // Look for the post in the blog directory structure
+    const blogDir = path.join(process.cwd(), 'src', 'content', 'blog')
+    const postDir = path.join(blogDir, slug)
+    const indexPath = path.join(postDir, 'index.md')
     
     let filePath: string
     try {
-      await fs.access(draftPath)
-      filePath = draftPath
+      await fs.access(indexPath)
+      filePath = indexPath
     } catch {
-      try {
-        await fs.access(blogPath)
-        filePath = blogPath
-      } catch {
-        return new Response(JSON.stringify({ error: 'Post not found' }), { 
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        })
-      }
+      return new Response(JSON.stringify({ error: 'Post not found' }), { 
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
     }
     
     const raw = await fs.readFile(filePath, 'utf-8')

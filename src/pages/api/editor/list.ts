@@ -27,19 +27,25 @@ export const GET: APIRoute = async ({ request }) => {
     
     const posts = await Promise.all(
       blogFiles
-        .filter((f) => f.endsWith('.mdx') && !f.includes('drafts'))
+        .filter((f) => {
+          // Filter for directories (blog post folders)
+          const fullPath = path.join(blogDir, f)
+          return !f.startsWith('.') && !f.includes('drafts')
+        })
         .map(async (f) => {
           try {
-            const full = path.join(blogDir, f)
-            const raw = await fs.readFile(full, 'utf-8')
+            // Look for index.md in each blog directory
+            const indexPath = path.join(blogDir, f, 'index.md')
+            const raw = await fs.readFile(indexPath, 'utf-8')
             const { data } = matter(raw)
             
-            const title = (data?.title as string) || f.replace(/\.mdx$/, '')
-            const slug = f.replace(/\.mdx$/, '')
+            const title = (data?.title as string) || f
+            const slug = f
             
             return {
               title,
-              slug
+              slug,
+              lastModified: data?.lastmod || data?.date || new Date().toISOString()
             }
           } catch (error) {
             console.error(`Error reading post ${f}:`, error)

@@ -188,4 +188,61 @@ export class GitHubAPI {
       throw error
     }
   }
+
+  async deleteBlogPost(slug: string, branch: string = 'main') {
+    try {
+      // Get the latest commit SHA
+      const ref = await this.getRef(branch)
+      const latestCommit = await this.getCommit(ref.object.sha)
+
+      // Get the current tree to find all files in the blog post directory
+      const treeResponse = await this.request(`/git/trees/${latestCommit.tree.sha}?recursive=1`)
+      const blogPostFiles = treeResponse.tree.filter((file: any) => 
+        file.path.startsWith(`src/content/blog/${slug}/`) && file.type === 'blob'
+      )
+
+      if (blogPostFiles.length === 0) {
+        throw new Error(`Blog post "${slug}" not found`)
+      }
+
+      // Create a new tree without the blog post files
+      const remainingFiles = treeResponse.tree.filter((file: any) => 
+        !file.path.startsWith(`src/content/blog/${slug}/`)
+      ).map((file: any) => ({
+        path: file.path,
+        mode: file.mode,
+        type: file.type,
+        sha: file.sha,
+      }))
+
+      const tree = await this.createTree(latestCommit.tree.sha, remainingFiles)
+
+      // Create commit
+      const commit = await this.createCommit({
+        message: `Delete blog post: ${slug}`,
+        author: {
+          name: 'Blog Editor',
+          email: 'editor@blog.com',
+        },
+        committer: {
+          name: 'Blog Editor',
+          email: 'editor@blog.com',
+        },
+        tree: tree.sha,
+        parents: [latestCommit.sha],
+      })
+
+      // Update branch reference
+      await this.updateRef(branch, commit.sha)
+
+      return {
+        success: true,
+        deletedFiles: blogPostFiles.length,
+        commit: commit.sha
+      }
+    } catch (error) {
+      console.error('Error deleting blog post:', error)
+      throw error
+    }
+  }
 }

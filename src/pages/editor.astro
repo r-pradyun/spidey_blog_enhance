@@ -4,6 +4,9 @@ import { requireAuth } from '../lib/auth'
 
 // Get user info for display (middleware handles auth check)
 const user = requireAuth(Astro.request)
+
+// Check if we're editing an existing post
+const editSlug = Astro.url.searchParams.get('edit')
 ---
 
 <PageLayout title="MDX Editor" description="Create and edit blog posts">
@@ -12,10 +15,20 @@ const user = requireAuth(Astro.request)
     <div class="mb-8 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
       <div class="flex justify-between items-center">
         <div>
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">MDX Editor</h1>
-          <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Create and edit blog posts</p>
+          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+            {editSlug ? `Edit Blog Post` : `MDX Editor`}
+          </h1>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            {editSlug ? `Editing: ${editSlug}` : `Create and edit blog posts`}
+          </p>
         </div>
         <div class="flex items-center gap-4">
+          <a
+            href="/blog-manager"
+            class="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+          >
+            Manage Posts
+          </a>
           <span class="text-sm text-gray-600 dark:text-gray-400">Welcome, {user?.username || 'User'}</span>
           <button
             id="logout-button"
@@ -238,6 +251,13 @@ const user = requireAuth(Astro.request)
       initializeForm();
       loadExistingPosts();
       checkGitHubStatus();
+      
+      // Check if we're editing an existing post
+      const urlParams = new URLSearchParams(window.location.search);
+      const editSlug = urlParams.get('edit');
+      if (editSlug) {
+        loadPostForEdit(editSlug);
+      }
 
       // Event listeners
       form.addEventListener('submit', handleSubmit);
@@ -559,6 +579,45 @@ const user = requireAuth(Astro.request)
 
       function clearMessage() {
         messageSpan.textContent = '';
+      }
+
+      async function loadPostForEdit(slug) {
+        try {
+          const response = await fetch(`/api/editor/get?slug=${slug}`, {
+            method: 'GET',
+            credentials: 'include'
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to load blog post');
+          }
+
+          const post = await response.json();
+          
+          // Populate the form with the existing post data
+          titleInput.value = post.frontmatter.title || '';
+          dateInput.value = post.frontmatter.date || '';
+          summaryInput.value = post.frontmatter.summary || '';
+          tagsInput.value = post.frontmatter.tags ? post.frontmatter.tags.join(', ') : '';
+          authorsInput.value = post.frontmatter.authors ? post.frontmatter.authors.join(', ') : '';
+          imagesInput.value = post.frontmatter.images ? post.frontmatter.images.join(', ') : '';
+          lastmodInput.value = post.frontmatter.lastmod || '';
+          layoutInput.value = post.frontmatter.layout || '';
+          canonicalUrlInput.value = post.frontmatter.canonicalUrl || '';
+          bibliographyInput.value = post.frontmatter.bibliography || '';
+          draftInput.checked = post.frontmatter.draft || false;
+          bodyInput.value = post.body || '';
+          
+          // Update slug display and preview
+          updateSlug();
+          updatePreview();
+          updateButtonText();
+          
+          showMessage(`📝 Loaded blog post: ${post.frontmatter.title}`);
+        } catch (error) {
+          console.error('Error loading blog post:', error);
+          showMessage(`❌ Error loading blog post: ${error.message}`);
+        }
       }
 
       async function handleLogout() {
