@@ -45,10 +45,10 @@ export const LINKS: Links = [
     TEXT: "Blog", 
     HREF: "/blog", 
   },
-  { 
-    TEXT: "Editor", 
-    HREF: "/editor", 
-  },
+  // { 
+  //   TEXT: "Editor", 
+  //   HREF: "/editor", 
+  // },
   // { 
   //   TEXT: "Projects", 
   //   HREF: "/projects", 
