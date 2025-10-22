@@ -46,11 +46,22 @@ export const DELETE: APIRoute = async ({ request, url }) => {
       
       console.log(`✅ Successfully deleted blog post "${slug}" from GitHub`)
       
+      // Create a detailed success message
+      let message = `Blog post "${slug}" deleted successfully`
+      if (result.deletedFiles > 0) {
+        message += ` (${result.deletedFiles} files deleted)`
+      }
+      if (result.failedFiles > 0) {
+        message += ` (${result.failedFiles} files failed to delete)`
+      }
+      
       return new Response(JSON.stringify({ 
         success: true, 
-        message: `Blog post "${slug}" deleted successfully`,
+        message: message,
         deletedFiles: result.deletedFiles,
-        commit: result.commit
+        failedFiles: result.failedFiles,
+        deletedFilePaths: result.deletedFilePaths,
+        failedFilePaths: result.failedFilePaths
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }

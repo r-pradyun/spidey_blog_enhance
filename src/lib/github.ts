@@ -191,12 +191,10 @@ export class GitHubAPI {
 
   async deleteBlogPost(slug: string, branch: string = 'main') {
     try {
-      // Get the latest commit SHA
-      const ref = await this.getRef(branch)
-      const latestCommit = await this.getCommit(ref.object.sha)
-
-      // Get the current tree to find all files in the blog post directory
-      const treeResponse = await this.request(`/git/trees/${latestCommit.tree.sha}?recursive=1`)
+      console.log(`🗑️ Starting deletion of blog post: ${slug}`)
+      
+      // First, get all files in the blog post directory
+      const treeResponse = await this.request(`/git/trees/HEAD?recursive=1`)
       const blogPostFiles = treeResponse.tree.filter((file: any) => 
         file.path.startsWith(`src/content/blog/${slug}/`) && file.type === 'blob'
       )
@@ -205,40 +203,54 @@ export class GitHubAPI {
         throw new Error(`Blog post "${slug}" not found`)
       }
 
-      // Create a new tree without the blog post files
-      const remainingFiles = treeResponse.tree.filter((file: any) => 
-        !file.path.startsWith(`src/content/blog/${slug}/`)
-      ).map((file: any) => ({
-        path: file.path,
-        mode: file.mode,
-        type: file.type,
-        sha: file.sha,
-      }))
+      console.log(`📁 Found ${blogPostFiles.length} files to delete in blog post: ${slug}`)
 
-      const tree = await this.createTree(latestCommit.tree.sha, remainingFiles)
+      // Delete each file individually using the Contents API
+      const deletedFiles: string[] = []
+      const failedFiles: string[] = []
 
-      // Create commit
-      const commit = await this.createCommit({
-        message: `Delete blog post: ${slug}`,
-        author: {
-          name: 'Blog Editor',
-          email: 'editor@blog.com',
-        },
-        committer: {
-          name: 'Blog Editor',
-          email: 'editor@blog.com',
-        },
-        tree: tree.sha,
-        parents: [latestCommit.sha],
-      })
+      for (const file of blogPostFiles) {
+        try {
+          console.log(`🗑️ Deleting file: ${file.path}`)
+          
+          // Get the file's SHA first
+          const fileResponse = await this.request(`/contents/${file.path}?ref=${branch}`)
+          const fileSha = fileResponse.sha
 
-      // Update branch reference
-      await this.updateRef(branch, commit.sha)
+          // Delete the file
+          await this.request(`/contents/${file.path}`, {
+            method: 'DELETE',
+            body: JSON.stringify({
+              message: `Delete file from blog post: ${slug}`,
+              sha: fileSha,
+              branch: branch,
+            }),
+          })
+
+          deletedFiles.push(file.path)
+          console.log(`✅ Successfully deleted: ${file.path}`)
+          
+        } catch (fileError: any) {
+          console.error(`❌ Failed to delete file ${file.path}:`, fileError.message)
+          failedFiles.push(file.path)
+        }
+      }
+
+      if (deletedFiles.length === 0) {
+        throw new Error(`Failed to delete any files from blog post: ${slug}`)
+      }
+
+      console.log(`✅ Successfully deleted ${deletedFiles.length} files from blog post: ${slug}`)
+      if (failedFiles.length > 0) {
+        console.warn(`⚠️ Failed to delete ${failedFiles.length} files:`, failedFiles)
+      }
 
       return {
         success: true,
-        deletedFiles: blogPostFiles.length,
-        commit: commit.sha
+        deletedFiles: deletedFiles.length,
+        failedFiles: failedFiles.length,
+        deletedFilePaths: deletedFiles,
+        failedFilePaths: failedFiles
       }
     } catch (error) {
       console.error('Error deleting blog post:', error)
