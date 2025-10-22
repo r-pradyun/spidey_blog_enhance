@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro'
 import { put } from '@vercel/blob'
+import { requireAuth } from '../../../lib/auth'
 
 function isValidSlug(slug: string) {
   return /^[a-z0-9-]+$/.test(slug)
@@ -7,6 +8,14 @@ function isValidSlug(slug: string) {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
+    // Check authentication
+    const user = requireAuth(request)
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
     console.log('Upload request received')
     
     // Get the raw body first to debug

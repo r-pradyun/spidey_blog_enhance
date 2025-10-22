@@ -1,8 +1,17 @@
 import type { APIRoute } from 'astro'
 import matter from 'gray-matter'
+import { requireAuth } from '../../../lib/auth'
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ request }) => {
   try {
+    // Check authentication
+    const user = requireAuth(request)
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
     const fs = await import('fs/promises')
     const path = await import('path')
     

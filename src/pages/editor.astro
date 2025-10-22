@@ -1,10 +1,31 @@
 ---
 import PageLayout from '@layouts/PageLayout.astro'
+import { requireAuth } from '../lib/auth'
+
+// Get user info for display (middleware handles auth check)
+const user = requireAuth(Astro.request)
 ---
 
 <PageLayout title="MDX Editor" description="Create and edit blog posts">
   <div id="editor-app" class="mx-auto max-w-4xl px-4 py-8">
-    <h1 class="mb-6 text-3xl font-bold">New MDX Post</h1>
+    <!-- Editor Header -->
+    <div class="mb-8 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">MDX Editor</h1>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Create and edit blog posts</p>
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="text-sm text-gray-600 dark:text-gray-400">Welcome, {user?.username || 'User'}</span>
+          <button
+            id="logout-button"
+            class="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    </div>
     
     <!-- Workflow Explanation -->
     <div class="mb-6 rounded-lg bg-blue-50 border border-blue-200 p-4 dark:bg-blue-900 dark:border-blue-700">
@@ -160,6 +181,33 @@ import PageLayout from '@layouts/PageLayout.astro'
   </div>
   
   <script>
+    // Check authentication on page load
+    async function checkAuth() {
+      try {
+        const response = await fetch('/api/auth/verify', {
+          method: 'GET',
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          window.location.href = '/login';
+          return;
+        }
+        
+        const data = await response.json();
+        if (!data.authenticated) {
+          window.location.href = '/login';
+          return;
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        window.location.href = '/login';
+      }
+    }
+    
+    // Check auth immediately
+    checkAuth();
+
     document.addEventListener('DOMContentLoaded', function() {
       const form = document.getElementById('editor-form');
       const titleInput = document.getElementById('title');
@@ -181,6 +229,7 @@ import PageLayout from '@layouts/PageLayout.astro'
       const slugDisplay = document.getElementById('slug-display');
       const existingPostsSelect = document.getElementById('existing-posts');
       const githubStatusDiv = document.getElementById('github-status');
+      const logoutButton = document.getElementById('logout-button');
 
       let existingPosts = [];
       let githubStatus = null;
@@ -197,6 +246,7 @@ import PageLayout from '@layouts/PageLayout.astro'
       bodyInput.addEventListener('paste', handlePaste);
       existingPostsSelect.addEventListener('change', loadPost);
       draftInput.addEventListener('change', updateButtonText);
+      logoutButton.addEventListener('click', handleLogout);
 
       // Set default date
       dateInput.value = new Date().toISOString().slice(0, 10);
@@ -509,6 +559,25 @@ import PageLayout from '@layouts/PageLayout.astro'
 
       function clearMessage() {
         messageSpan.textContent = '';
+      }
+
+      async function handleLogout() {
+        try {
+          const response = await fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            window.location.href = '/login';
+          } else {
+            console.error('Logout failed');
+          }
+        } catch (error) {
+          console.error('Logout error:', error);
+        }
       }
     });
   </script>

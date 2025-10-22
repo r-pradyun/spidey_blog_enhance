@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro'
 import { GitHubAPI } from '../../../lib/github'
+import { requireAuth } from '../../../lib/auth'
 
 type RequestBody = {
   frontmatter: Record<string, unknown>
@@ -60,6 +61,15 @@ function getRequestAuthor(request: Request): string | null {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
+    // Check authentication
+    const user = requireAuth(request)
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
     const body = (await request.json()) as RequestBody
     const { frontmatter, body: mdxBody, slug } = body
 
