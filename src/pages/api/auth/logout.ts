@@ -12,14 +12,7 @@ export const POST: APIRoute = async ({ request }) => {
       })
     }
 
-    const sessionId = request.headers.get('cookie')
-      ?.split(';')
-      .find(c => c.trim().startsWith('session='))
-      ?.split('=')[1]
-
-    if (sessionId) {
-      destroySession(sessionId)
-    }
+    // No need to destroy session since we're using stateless JWT
 
     const cookie = clearSessionCookie()
 
