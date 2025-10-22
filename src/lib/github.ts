@@ -1,3 +1,15 @@
+/**
+ * Copyright (c) 2025 Pradyun R
+ * 
+ * PROPRIETARY SOFTWARE - All Rights Reserved
+ * 
+ * This file contains proprietary GitHub API integration code.
+ * Unauthorized copying, distribution, or use is strictly prohibited.
+ * Commercial use requires explicit written permission.
+ * 
+ * For licensing inquiries, contact: [Your Email]
+ */
+
 interface GitHubFile {
   path: string
   mode: '100644' | '100755' | '040000' | '160000' | '120000'

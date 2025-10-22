@@ -1,3 +1,15 @@
+/**
+ * Copyright (c) 2025 Pradyun R
+ * 
+ * PROPRIETARY SOFTWARE - All Rights Reserved
+ * 
+ * This file contains proprietary JWT authentication system.
+ * Unauthorized copying, distribution, or use is strictly prohibited.
+ * Commercial use requires explicit written permission.
+ * 
+ * For licensing inquiries, contact: [Your Email]
+ */
+
 // Simple authentication system for the blog editor
 // Using JWT tokens stored in cookies for serverless compatibility
 
