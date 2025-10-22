@@ -2,6 +2,8 @@
 
 A modern, feature-rich blog built with Astro that includes a built-in MDX editor, GitHub integration, and advanced content management capabilities. Perfect for developers who want a powerful blog with seamless deployment to Vercel.
 
+> **⚠️ PROPRIETARY SOFTWARE**: This software contains proprietary features and implementations. Commercial use requires explicit permission. See [LICENSE](LICENSE) for details.
+
 ## 🌟 Features
 
 ### **Built-in MDX Editor**
@@ -288,7 +290,15 @@ For other deployment platforms, ensure:
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under a Proprietary Software License Agreement. 
+
+**⚠️ IMPORTANT**: This software contains proprietary features and implementations. 
+- ✅ **Permitted**: Educational use, personal learning, academic research
+- ❌ **Prohibited**: Commercial use, copying, distribution, derivative works
+
+See the [LICENSE](LICENSE) file for complete terms and conditions.
+
+**For commercial licensing inquiries, please contact the author.**
 
 ## 🙏 Acknowledgments
 
