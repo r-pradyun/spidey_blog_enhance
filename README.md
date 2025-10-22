@@ -101,7 +101,8 @@ A modern, feature-rich blog built with Astro that includes a built-in MDX editor
 
 ### ✏️ **MDX Editor**
 <!-- Add screenshot of editor here -->
-![MDX Editor](screenshots/editor.png)
+![MDX Editor](screenshots/mdx1.png)
+![MDX Editor](screenshots/mdx2.png)
 *Powerful MDX editor with live preview and image upload*
 
 ### 📊 **Blog Manager**
@@ -113,11 +114,6 @@ A modern, feature-rich blog built with Astro that includes a built-in MDX editor
 <!-- Add screenshot of login page here -->
 ![Login](screenshots/login.png)
 *Secure authentication system*
-
-### 📱 **Mobile Responsive**
-<!-- Add screenshot of mobile view here -->
-![Mobile View](screenshots/mobile.png)
-*Fully responsive design works on all devices*
 
 ## 🛠️ Technical Stack
 
