@@ -4,44 +4,44 @@ A modern, feature-rich blog built with Astro that includes a built-in MDX editor
 
 ## 🌟 Features
 
-### 📝 **Built-in MDX Editor**
+### **Built-in MDX Editor**
 - **Live Preview**: Real-time MDX rendering as you type
 - **Drag & Drop Images**: Upload images by dragging and dropping or pasting
 - **Frontmatter Management**: Complete frontmatter editor with validation
 - **Auto-save**: Automatic saving with unsaved changes warning
 - **Load Existing Posts**: Edit any existing blog post seamlessly
 
-### 🔐 **Authentication System**
+### **Authentication System**
 - **JWT-based Authentication**: Secure session management
 - **Admin Dashboard**: Protected admin area for content management
 - **Session Management**: Automatic session handling with cookies
 - **Role-based Access**: Admin and editor roles support
 
-### 🔗 **GitHub Integration**
+### **GitHub Integration**
 - **Automatic Commits**: All changes automatically committed to GitHub
 - **Real-time Sync**: Live synchronization with your GitHub repository
 - **Version Control**: Complete version history for all changes
 - **Production Ready**: Works seamlessly when deployed to Vercel
 
-### 🖼️ **Advanced Image Workflow**
+### **Advanced Image Workflow**
 - **Vercel Blob Storage**: Instant image uploads with CDN delivery
 - **Automatic Processing**: Images processed and committed to GitHub on publish
 - **Local Path Conversion**: Automatic URL conversion for production
 - **Image Management**: Complete image lifecycle management
 
-### 📊 **Content Management**
+### **Content Management**
 - **Blog Manager**: Centralized dashboard to manage all posts
 - **CRUD Operations**: Create, Read, Update, Delete blog posts
 - **Bulk Operations**: Manage multiple posts efficiently
 - **Search & Filter**: Find posts quickly with built-in search
 
-### 🎨 **Modern UI/UX**
+### **Modern UI/UX**
 - **Responsive Design**: Works perfectly on all devices
 - **Dark Mode**: Built-in dark/light theme support
 - **Smooth Animations**: Polished user experience
 - **Accessibility**: WCAG compliant design
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Node.js 20.x or higher
@@ -94,23 +94,23 @@ A modern, feature-rich blog built with Astro that includes a built-in MDX editor
 
 ## 📸 Screenshots
 
-### 🏠 **Homepage**
+### **Homepage**
 <!-- Add screenshot of homepage here -->
 ![Homepage](screenshots/homepage.png)
 *Clean, modern homepage with blog post listings*
 
-### ✏️ **MDX Editor**
+### **MDX Editor**
 <!-- Add screenshot of editor here -->
 ![MDX Editor](screenshots/mdx1.png)
 ![MDX Editor](screenshots/mdx2.png)
 *Powerful MDX editor with live preview and image upload*
 
-### 📊 **Blog Manager**
+### **Blog Manager**
 <!-- Add screenshot of blog manager here -->
 ![Blog Manager](screenshots/blog-manager.png)
 *Centralized dashboard for managing all blog posts*
 
-### 🔐 **Login Page**
+### **Login Page**
 <!-- Add screenshot of login page here -->
 ![Login](screenshots/login.png)
 *Secure authentication system*
@@ -152,7 +152,7 @@ spidey_blog_enhance/
 └── vercel.json            # Vercel configuration
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### GitHub Setup
 
@@ -180,7 +180,7 @@ spidey_blog_enhance/
    BLOB_READ_WRITE_TOKEN=vercel_blob_token_here
    ```
 
-## 🚀 Deployment
+## Deployment
 
 ### Vercel Deployment
 
@@ -204,7 +204,7 @@ For other deployment platforms, ensure:
 - Environment variables are set
 - Node.js 20.x is supported
 
-## 📖 Usage Guide
+## Usage Guide
 
 ### Creating Blog Posts
 
@@ -297,7 +297,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Vercel](https://vercel.com/) for deployment and storage
 - [GitHub](https://github.com/) for version control integration
 
-## 📞 Support
+## Support
 
 If you have any questions or need help:
 
