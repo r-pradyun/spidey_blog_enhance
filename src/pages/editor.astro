@@ -1,0 +1,643 @@
+---
+import PageLayout from '@layouts/PageLayout.astro'
+import { requireAuth } from '../lib/auth'
+
+// Get user info for display (middleware handles auth check)
+const user = requireAuth(Astro.request)
+
+// Check if we're editing an existing post
+const editSlug = Astro.url.searchParams.get('edit')
+---
+
+<PageLayout title="MDX Editor" description="Create and edit blog posts">
+  <div id="editor-app" class="mx-auto max-w-4xl px-4 py-8">
+    <!-- Editor Header -->
+    <div class="mb-8 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+            {editSlug ? `Edit Blog Post` : `MDX Editor`}
+          </h1>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            {editSlug ? `Editing: ${editSlug}` : `Create and edit blog posts`}
+          </p>
+        </div>
+        <div class="flex items-center gap-4">
+          <a
+            href="/blog-manager"
+            class="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+          >
+            Manage Posts
+          </a>
+          <span class="text-sm text-gray-600 dark:text-gray-400">Welcome, {user?.username || 'User'}</span>
+          <button
+            id="logout-button"
+            class="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Workflow Explanation -->
+    <div class="mb-6 rounded-lg bg-blue-50 border border-blue-200 p-4 dark:bg-blue-900 dark:border-blue-700">
+      <h3 class="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">🚀 Vercel Blob Image Workflow</h3>
+      <div class="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+        <p>• <strong>Images are uploaded to Vercel Blob Storage</strong> for immediate preview</p>
+        <p>• <strong>CDN URLs are inserted</strong> into MDX for instant rendering</p>
+        <p>• <strong>When you publish</strong>, images are downloaded and committed to GitHub</p>
+        <p>• <strong>MDX URLs are updated</strong> to use local paths for production</p>
+        <p>• <strong>Vercel automatically redeploys</strong> with the final images</p>
+      </div>
+    </div>
+    
+    <!-- GitHub Status -->
+    <div id="github-status" class="mb-4 rounded-lg p-3 text-sm hidden"></div>
+    
+    <form id="editor-form" class="space-y-6">
+      <div class="rounded border border-gray-300 p-3 dark:bg-gray-900">
+        <div class="mb-2 text-sm font-medium">Edit existing post</div>
+        <div class="flex gap-2">
+          <select id="existing-posts" class="w-full rounded border border-gray-300 p-2 dark:bg-gray-950">
+            <option value="" disabled>Loading...</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <label class="flex flex-col">
+          <span class="mb-1 text-sm font-medium">Title *</span>
+          <input
+            id="title"
+            class="rounded border border-gray-300 p-2 dark:bg-gray-900"
+            required
+          />
+        </label>
+        <label class="flex flex-col">
+          <span class="mb-1 text-sm font-medium">Date *</span>
+          <input
+            id="date"
+            type="date"
+            class="rounded border border-gray-300 p-2 dark:bg-gray-900"
+            required
+          />
+        </label>
+        <label class="flex items-center gap-2">
+          <input
+            id="draft"
+            type="checkbox"
+            checked
+          />
+          <span class="text-sm font-medium">Draft (uncheck to publish immediately)</span>
+        </label>
+        <div class="text-sm text-gray-600 dark:text-gray-400 self-end">
+          Slug: <span id="slug-display">untitled</span>
+        </div>
+      </div>
+
+      <label class="flex flex-col">
+        <span class="mb-1 text-sm font-medium">Summary</span>
+        <textarea
+          id="summary"
+          class="min-h-[80px] rounded border border-gray-300 p-2 dark:bg-gray-900"
+        ></textarea>
+      </label>
+
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <label class="flex flex-col">
+          <span class="mb-1 text-sm font-medium">Tags (comma separated)</span>
+          <input
+            id="tags"
+            class="rounded border border-gray-300 p-2 dark:bg-gray-900"
+            placeholder="nextjs, tailwind, mdx"
+          />
+        </label>
+        <label class="flex flex-col">
+          <span class="mb-1 text-sm font-medium">Authors (comma separated)</span>
+          <input
+            id="authors"
+            class="rounded border border-gray-300 p-2 dark:bg-gray-900"
+          />
+        </label>
+        <label class="flex flex-col">
+          <span class="mb-1 text-sm font-medium">Images (comma separated URLs)</span>
+          <input
+            id="images"
+            class="rounded border border-gray-300 p-2 dark:bg-gray-900"
+          />
+        </label>
+        <label class="flex flex-col">
+          <span class="mb-1 text-sm font-medium">Last Modified</span>
+          <input
+            id="lastmod"
+            type="date"
+            class="rounded border border-gray-300 p-2 dark:bg-gray-900"
+          />
+        </label>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <label class="flex flex-col">
+          <span class="mb-1 text-sm font-medium">Layout</span>
+          <input
+            id="layout"
+            class="rounded border border-gray-300 p-2 dark:bg-gray-900"
+            placeholder="PostSimple or PostLayout"
+          />
+        </label>
+        <label class="flex flex-col md:col-span-2">
+          <span class="mb-1 text-sm font-medium">Canonical URL</span>
+          <input
+            id="canonicalUrl"
+            class="rounded border border-gray-300 p-2 dark:bg-gray-900"
+          />
+        </label>
+        <label class="flex flex-col md:col-span-3">
+          <span class="mb-1 text-sm font-medium">Bibliography (path)</span>
+          <input
+            id="bibliography"
+            class="rounded border border-gray-300 p-2 dark:bg-gray-900"
+            placeholder="data/references-data.bib"
+          />
+        </label>
+      </div>
+
+      <label class="flex flex-col">
+        <span class="mb-1 text-sm font-medium">MDX Body</span>
+        <textarea
+          id="body"
+          class="min-h-[480px] rounded border border-gray-300 p-2 font-mono dark:bg-gray-900"
+          placeholder="\n## Hello MDX\n\nWrite your content here..."
+        ></textarea>
+      </label>
+      
+      <div class="flex flex-col">
+        <span class="mb-1 text-sm font-medium">Live Preview</span>
+        <div
+          id="preview"
+          class="prose max-w-none rounded border border-gray-300 p-3 dark:prose-invert dark:bg-gray-900"
+        ></div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button
+          type="submit"
+          id="save-button"
+          class="rounded bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          <span id="save-button-text">Save MDX</span>
+        </button>
+        <span id="message" class="text-sm text-gray-700 dark:text-gray-300"></span>
+      </div>
+    </form>
+  </div>
+  
+  <script>
+    // Check authentication on page load
+    async function checkAuth() {
+      try {
+        const response = await fetch('/api/auth/verify', {
+          method: 'GET',
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          window.location.href = '/login';
+          return;
+        }
+        
+        const data = await response.json();
+        if (!data.authenticated) {
+          window.location.href = '/login';
+          return;
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        window.location.href = '/login';
+      }
+    }
+    
+    // Check auth immediately
+    checkAuth();
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('editor-form');
+      const titleInput = document.getElementById('title');
+      const dateInput = document.getElementById('date');
+      const draftInput = document.getElementById('draft');
+      const summaryInput = document.getElementById('summary');
+      const tagsInput = document.getElementById('tags');
+      const authorsInput = document.getElementById('authors');
+      const imagesInput = document.getElementById('images');
+      const lastmodInput = document.getElementById('lastmod');
+      const layoutInput = document.getElementById('layout');
+      const canonicalUrlInput = document.getElementById('canonicalUrl');
+      const bibliographyInput = document.getElementById('bibliography');
+      const bodyInput = document.getElementById('body');
+      const previewDiv = document.getElementById('preview');
+      const saveButton = document.getElementById('save-button');
+      const saveButtonText = document.getElementById('save-button-text');
+      const messageSpan = document.getElementById('message');
+      const slugDisplay = document.getElementById('slug-display');
+      const existingPostsSelect = document.getElementById('existing-posts');
+      const githubStatusDiv = document.getElementById('github-status');
+      const logoutButton = document.getElementById('logout-button');
+
+      let existingPosts = [];
+      let githubStatus = null;
+
+      // Initialize
+      initializeForm();
+      loadExistingPosts();
+      checkGitHubStatus();
+      
+      // Check if we're editing an existing post
+      const urlParams = new URLSearchParams(window.location.search);
+      const editSlug = urlParams.get('edit');
+      if (editSlug) {
+        loadPostForEdit(editSlug);
+      }
+
+      // Event listeners
+      form.addEventListener('submit', handleSubmit);
+      titleInput.addEventListener('input', updateSlug);
+      bodyInput.addEventListener('input', updatePreview);
+      bodyInput.addEventListener('paste', handlePaste);
+      existingPostsSelect.addEventListener('change', loadPost);
+      draftInput.addEventListener('change', updateButtonText);
+      logoutButton.addEventListener('click', handleLogout);
+
+      // Set default date
+      dateInput.value = new Date().toISOString().slice(0, 10);
+
+      function initializeForm() {
+        updateSlug();
+        updatePreview();
+        updateButtonText();
+      }
+
+      function updateButtonText() {
+        saveButtonText.textContent = draftInput.checked ? 'Save as Draft' : 'Publish Post';
+      }
+
+      function updateSlug() {
+        const title = titleInput.value || 'untitled';
+        const slug = title
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/[\s_-]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+        slugDisplay.textContent = slug;
+      }
+
+      function updatePreview() {
+        const md = bodyInput.value;
+        const html = md
+          .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+          .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+          .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+          .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+          .replace(/\*(.*)\*/gim, '<em>$1</em>')
+          .replace(/!\[([^\]]*)\]\(([^)]+)\)/gim, '<img alt="$1" src="$2" />')
+          .replace(/\[([^\]]*)\]\(([^)]+)\)/gim, '<a href="$2">$1</a>')
+          .replace(/\n/gim, '<br>');
+        previewDiv.innerHTML = html;
+      }
+
+      async function loadExistingPosts() {
+        try {
+          const res = await fetch('/api/editor/list');
+          if (!res.ok) return;
+          const data = await res.json();
+          existingPosts = data.posts || [];
+          
+          existingPostsSelect.innerHTML = '<option value="" disabled>Select a post</option>';
+          existingPosts.forEach(post => {
+            const option = document.createElement('option');
+            option.value = post.slug;
+            option.textContent = post.title;
+            existingPostsSelect.appendChild(option);
+          });
+        } catch (error) {
+          console.error('Failed to load existing posts:', error);
+        }
+      }
+
+      async function checkGitHubStatus() {
+        try {
+          const res = await fetch('/api/editor/github-status');
+          if (!res.ok) return;
+          githubStatus = await res.json();
+          
+          if (githubStatus.configured) {
+            githubStatusDiv.className = 'mb-4 rounded-lg p-3 text-sm bg-green-100 border border-green-300 text-green-800 dark:bg-green-900 dark:border-green-700 dark:text-green-200';
+            githubStatusDiv.innerHTML = `
+              <div class="flex items-center gap-2">
+                <span>✅</span>
+                <span>GitHub Integration: ${githubStatus.owner}/${githubStatus.repo}</span>
+                <span class="text-xs">(Posts will be automatically pushed to GitHub)</span>
+              </div>
+            `;
+          } else {
+            githubStatusDiv.className = 'mb-4 rounded-lg p-3 text-sm bg-yellow-100 border border-yellow-300 text-yellow-800 dark:bg-yellow-900 dark:border-yellow-700 dark:text-yellow-200';
+            githubStatusDiv.innerHTML = `
+              <div class="flex items-center gap-2">
+                <span>⚠️</span>
+                <span>GitHub Integration: Not configured</span>
+                <span class="text-xs">(Posts will be saved locally only)</span>
+              </div>
+            `;
+          }
+          githubStatusDiv.classList.remove('hidden');
+        } catch (error) {
+          console.error('Failed to check GitHub status:', error);
+        }
+      }
+
+      async function loadPost() {
+        const slug = existingPostsSelect.value;
+        if (!slug) return;
+
+        try {
+          const res = await fetch(`/api/editor/get?slug=${encodeURIComponent(slug)}`);
+          if (!res.ok) return;
+          const data = await res.json();
+          
+          titleInput.value = data.frontmatter.title || '';
+          dateInput.value = data.frontmatter.date || '';
+          draftInput.checked = data.frontmatter.draft || false;
+          summaryInput.value = data.frontmatter.summary || '';
+          tagsInput.value = Array.isArray(data.frontmatter.tags) ? data.frontmatter.tags.join(', ') : (data.frontmatter.tags || '');
+          authorsInput.value = Array.isArray(data.frontmatter.authors) ? data.frontmatter.authors.join(', ') : (data.frontmatter.authors || '');
+          imagesInput.value = Array.isArray(data.frontmatter.images) ? data.frontmatter.images.join(', ') : (data.frontmatter.images || '');
+          lastmodInput.value = data.frontmatter.lastmod || '';
+          layoutInput.value = data.frontmatter.layout || '';
+          canonicalUrlInput.value = data.frontmatter.canonicalUrl || '';
+          bibliographyInput.value = data.frontmatter.bibliography || '';
+          bodyInput.value = data.body || '';
+          
+          updateSlug();
+          updatePreview();
+          updateButtonText();
+        } catch (error) {
+          console.error('Failed to load post:', error);
+        }
+      }
+
+      async function handleSubmit(e) {
+        e.preventDefault();
+        
+        const title = titleInput.value;
+        const date = dateInput.value;
+        
+        if (!title || !date) {
+          showMessage('Title and date are required', 'error');
+          return;
+        }
+
+        saveButton.disabled = true;
+        saveButtonText.textContent = 'Saving…';
+        clearMessage();
+
+        try {
+          const frontmatter = {
+            title,
+            date,
+            lastmod: lastmodInput.value || '',
+            draft: draftInput.checked,
+            summary: summaryInput.value || '',
+            tags: tagsInput.value ? tagsInput.value.split(',').map(t => t.trim()).filter(t => t) : [],
+            authors: authorsInput.value ? authorsInput.value.split(',').map(a => a.trim()).filter(a => a) : [],
+            images: imagesInput.value ? imagesInput.value.split(',').map(i => i.trim()).filter(i => i) : [],
+            layout: layoutInput.value || '',
+            bibliography: bibliographyInput.value || '',
+            canonicalUrl: canonicalUrlInput.value || ''
+          };
+
+          const slug = slugDisplay.textContent;
+          const body = bodyInput.value;
+
+          const res = await fetch('/api/editor/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ frontmatter, body, slug }),
+          });
+
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data?.error || 'Failed to save');
+          }
+
+          const data = await res.json();
+          
+          if (data.github?.committed) {
+            if (data.images && data.images.processed && data.images.processed.length > 0) {
+              const status = draftInput.checked ? 'Draft saved' : 'Post published';
+              showMessage(`✅ ${status}: ${data.path} - ${data.images.processed.length} images processed.`);
+            } else {
+              const status = draftInput.checked ? 'Draft saved' : 'Post published';
+              showMessage(`✅ ${status}: ${data.path}`);
+            }
+          } else if (data.local) {
+            const status = draftInput.checked ? 'Draft saved' : 'Post published';
+            showMessage(`✅ ${status}: ${data.path} - Saved locally (GitHub not configured)`);
+          } else {
+            const status = draftInput.checked ? 'Draft saved' : 'Post published';
+            showMessage(`✅ ${status}: ${data.path}`);
+          }
+          
+        } catch (err) {
+          showMessage(err.message || 'Failed to save', 'error');
+        } finally {
+          saveButton.disabled = false;
+          updateButtonText();
+        }
+      }
+
+      async function handlePaste(e) {
+        try {
+          const items = e.clipboardData?.items || [];
+          for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            if (item.kind === 'file') {
+              const file = item.getAsFile();
+              if (file && /^image\//.test(file.type)) {
+                e.preventDefault();
+                const url = await uploadImage(file);
+                const baseName = (file.name || 'image').replace(/\.[^.]+$/, '');
+                const mdx = `![${baseName}](${url})\n`;
+                insertAtCursor(mdx);
+                showMessage('Image uploaded');
+                return;
+              }
+            }
+          }
+        } catch (err) {
+          showMessage(err.message || 'Upload failed', 'error');
+        }
+      }
+
+      async function uploadImage(file) {
+        try {
+          console.log('Starting upload process...');
+          console.log('File details:', {
+            name: file.name,
+            size: file.size,
+            type: file.type
+          });
+          
+          // Convert file to base64 using FileReader (more reliable)
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = reader.result;
+              // Remove data:image/...;base64, prefix
+              const base64Data = result.split(',')[1];
+              console.log('Base64 conversion successful, length:', base64Data.length);
+              resolve(base64Data);
+            };
+            reader.onerror = () => {
+              console.error('FileReader error:', reader.error);
+              reject(new Error('Failed to read file'));
+            };
+            reader.readAsDataURL(file);
+          });
+          
+          const payload = {
+            slug: slugDisplay.textContent,
+            filename: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            base64: base64
+          };
+          
+          console.log('Payload created:', {
+            slug: payload.slug,
+            filename: payload.filename,
+            fileType: payload.fileType,
+            fileSize: payload.fileSize,
+            base64Length: payload.base64.length
+          });
+          
+          const jsonPayload = JSON.stringify(payload);
+          console.log('JSON payload size:', jsonPayload.length);
+          console.log('JSON payload preview:', jsonPayload.substring(0, 200) + '...');
+          
+          const res = await fetch('/api/editor/upload', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: jsonPayload
+          });
+          
+          console.log('Upload response status:', res.status);
+          
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            console.error('Upload failed:', data);
+            throw new Error(data?.error || 'Upload failed');
+          }
+          
+          const data = await res.json();
+          console.log('Upload success:', data);
+          
+          if (data.message) {
+            showMessage(data.message);
+          }
+          
+          return data.url;
+        } catch (error) {
+          console.error('Upload error:', error);
+          throw error;
+        }
+      }
+
+      function insertAtCursor(text) {
+        const start = bodyInput.selectionStart ?? bodyInput.value.length;
+        const end = bodyInput.selectionEnd ?? bodyInput.value.length;
+        const before = bodyInput.value.substring(0, start);
+        const after = bodyInput.value.substring(end);
+        const next = `${before}${text}${after}`;
+        bodyInput.value = next;
+        
+        requestAnimationFrame(() => {
+          const pos = start + text.length;
+          bodyInput.selectionStart = bodyInput.selectionEnd = pos;
+          bodyInput.focus();
+        });
+        
+        updatePreview();
+      }
+
+      function showMessage(message, type = 'success') {
+        messageSpan.textContent = message;
+        messageSpan.className = `text-sm ${type === 'error' ? 'text-red-600' : 'text-gray-700 dark:text-gray-300'}`;
+      }
+
+      function clearMessage() {
+        messageSpan.textContent = '';
+      }
+
+      async function loadPostForEdit(slug) {
+        try {
+          const response = await fetch(`/api/editor/get?slug=${slug}`, {
+            method: 'GET',
+            credentials: 'include'
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to load blog post');
+          }
+
+          const post = await response.json();
+          
+          // Populate the form with the existing post data
+          titleInput.value = post.frontmatter.title || '';
+          dateInput.value = post.frontmatter.date || '';
+          summaryInput.value = post.frontmatter.summary || '';
+          tagsInput.value = post.frontmatter.tags ? post.frontmatter.tags.join(', ') : '';
+          authorsInput.value = post.frontmatter.authors ? post.frontmatter.authors.join(', ') : '';
+          imagesInput.value = post.frontmatter.images ? post.frontmatter.images.join(', ') : '';
+          lastmodInput.value = post.frontmatter.lastmod || '';
+          layoutInput.value = post.frontmatter.layout || '';
+          canonicalUrlInput.value = post.frontmatter.canonicalUrl || '';
+          bibliographyInput.value = post.frontmatter.bibliography || '';
+          draftInput.checked = post.frontmatter.draft || false;
+          bodyInput.value = post.body || '';
+          
+          // Update slug display and preview
+          updateSlug();
+          updatePreview();
+          updateButtonText();
+          
+          showMessage(`📝 Loaded blog post: ${post.frontmatter.title}`);
+        } catch (error) {
+          console.error('Error loading blog post:', error);
+          showMessage(`❌ Error loading blog post: ${error.message}`);
+        }
+      }
+
+      async function handleLogout() {
+        try {
+          const response = await fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            window.location.href = '/login';
+          } else {
+            console.error('Logout failed');
+          }
+        } catch (error) {
+          console.error('Logout error:', error);
+        }
+      }
+    });
+  </script>
+</PageLayout>

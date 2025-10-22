@@ -1,0 +1,212 @@
+---
+import PageLayout from '@layouts/PageLayout.astro'
+import { requireAuth } from '../lib/auth'
+
+// Check authentication
+const user = requireAuth(Astro.request)
+if (!user) {
+  return Astro.redirect('/login')
+}
+---
+
+<PageLayout title="Blog Manager" description="Manage your blog posts">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <!-- Header -->
+      <div class="mb-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Blog Manager</h1>
+            <p class="mt-2 text-gray-600 dark:text-gray-400">Manage and edit your blog posts</p>
+          </div>
+          <div class="flex items-center gap-4">
+            <a
+              href="/editor"
+              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Create New Post
+            </a>
+            <span class="text-sm text-gray-600 dark:text-gray-400">Welcome, {user.username}</span>
+            <button
+              id="logout-button"
+              class="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Blog Posts List -->
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 class="text-xl font-semibold text-gray-900 dark:text-white">All Blog Posts</h2>
+        </div>
+        
+        <div id="blog-posts-container" class="divide-y divide-gray-200 dark:divide-gray-700">
+          <!-- Blog posts will be loaded here -->
+          <div class="p-6 text-center text-gray-500 dark:text-gray-400">
+            Loading blog posts...
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Check authentication on page load
+    async function checkAuth() {
+      try {
+        const response = await fetch('/api/auth/verify', {
+          method: 'GET',
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          window.location.href = '/login';
+          return;
+        }
+        
+        const data = await response.json();
+        if (!data.authenticated) {
+          window.location.href = '/login';
+          return;
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        window.location.href = '/login';
+      }
+    }
+    
+    // Check auth immediately
+    checkAuth();
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const blogPostsContainer = document.getElementById('blog-posts-container');
+      const logoutButton = document.getElementById('logout-button');
+
+      // Load blog posts
+      async function loadBlogPosts() {
+        try {
+          const response = await fetch('/api/editor/list', {
+            method: 'GET',
+            credentials: 'include'
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to load blog posts');
+          }
+
+          const data = await response.json();
+          const posts = data.posts || [];
+          displayBlogPosts(posts);
+        } catch (error) {
+          console.error('Error loading blog posts:', error);
+          blogPostsContainer.innerHTML = `
+            <div class="p-6 text-center text-red-500">
+              Error loading blog posts: ${error.message}
+            </div>
+          `;
+        }
+      }
+
+      function displayBlogPosts(posts) {
+        if (posts.length === 0) {
+          blogPostsContainer.innerHTML = `
+            <div class="p-6 text-center text-gray-500 dark:text-gray-400">
+              No blog posts found.
+            </div>
+          `;
+          return;
+        }
+
+        blogPostsContainer.innerHTML = posts.map(post => `
+          <div class="p-6 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                  ${post.title || 'Untitled'}
+                </h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Slug: ${post.slug}
+                </p>
+                <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                  Last modified: ${new Date(post.lastModified).toLocaleDateString()}
+                </p>
+              </div>
+              <div class="flex items-center gap-3 ml-4">
+                <button
+                  onclick="editPost('${post.slug}')"
+                  class="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                >
+                  Edit
+                </button>
+                <button
+                  onclick="deletePost('${post.slug}', '${post.title}')"
+                  class="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Edit post function
+      window.editPost = function(slug) {
+        window.location.href = `/editor?edit=${slug}`;
+      };
+
+      // Delete post function
+      window.deletePost = async function(slug, title) {
+        if (!confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
+          return;
+        }
+
+        try {
+          const response = await fetch(`/api/editor/delete?slug=${slug}`, {
+            method: 'DELETE',
+            credentials: 'include'
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to delete post');
+          }
+
+          // Reload the blog posts list
+          loadBlogPosts();
+        } catch (error) {
+          console.error('Error deleting post:', error);
+          alert('Error deleting post: ' + error.message);
+        }
+      };
+
+      // Logout function
+      async function handleLogout() {
+        try {
+          const response = await fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            window.location.href = '/login';
+          } else {
+            console.error('Logout failed');
+          }
+        } catch (error) {
+          console.error('Logout error:', error);
+        }
+      }
+
+      // Event listeners
+      logoutButton.addEventListener('click', handleLogout);
+
+      // Load blog posts on page load
+      loadBlogPosts();
+    });
+  </script>
+</PageLayout>

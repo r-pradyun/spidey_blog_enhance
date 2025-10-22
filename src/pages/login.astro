@@ -1,0 +1,117 @@
+---
+import PageLayout from '@layouts/PageLayout.astro'
+---
+
+<PageLayout title="Login - Blog Editor" description="Login to access the blog editor">
+  <div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+      <div>
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
+          Blog Editor Login
+        </h2>
+        <p class="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+          Sign in to access the blog editor
+        </p>
+      </div>
+      
+      <form id="login-form" class="mt-8 space-y-6">
+        <div class="rounded-md shadow-sm -space-y-px">
+          <div>
+            <label for="username" class="sr-only">Username</label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              required
+              class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+              placeholder="Username"
+            />
+          </div>
+          <div>
+            <label for="password" class="sr-only">Password</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+              placeholder="Password"
+            />
+          </div>
+        </div>
+
+        <div id="error-message" class="hidden text-red-600 text-sm text-center"></div>
+
+        <div>
+          <button
+            type="submit"
+            id="login-button"
+            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+          >
+            <span id="login-button-text">Sign in</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('login-form') as HTMLFormElement
+      const usernameInput = document.getElementById('username') as HTMLInputElement
+      const passwordInput = document.getElementById('password') as HTMLInputElement
+      const loginButton = document.getElementById('login-button') as HTMLButtonElement
+      const loginButtonText = document.getElementById('login-button-text') as HTMLSpanElement
+      const errorMessage = document.getElementById('error-message') as HTMLDivElement
+
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault()
+        
+        const username = usernameInput.value.trim()
+        const password = passwordInput.value
+
+        if (!username || !password) {
+          showError('Please enter both username and password')
+          return
+        }
+
+        loginButton.disabled = true
+        loginButtonText.textContent = 'Signing in...'
+        hideError()
+
+        try {
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+          })
+
+          const data = await response.json()
+
+          if (response.ok) {
+            // Redirect to editor
+            window.location.href = '/editor'
+          } else {
+            showError(data.error || 'Login failed')
+          }
+        } catch (error) {
+          showError('Network error. Please try again.')
+        } finally {
+          loginButton.disabled = false
+          loginButtonText.textContent = 'Sign in'
+        }
+      })
+
+      function showError(message: string) {
+        errorMessage.textContent = message
+        errorMessage.classList.remove('hidden')
+      }
+
+      function hideError() {
+        errorMessage.classList.add('hidden')
+      }
+    })
+  </script>
+</PageLayout>
