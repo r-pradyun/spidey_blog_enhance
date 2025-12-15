@@ -273,25 +273,14 @@ ptr(sockaddr).add(0x2).writeU16(byteFlip(BURP_PROXY_PORT));
 ptr(sockaddr).add(0x4).writeByteArray(convertIpToByteArray(BURP_PROXY_IP));
 ```
 
-This forces **all outbound Flutter connections** to go through Burp—regardless of hostname, IP, or protocol.
+This forces **all outbound Flutter connections** to go through Burp regardless of hostname, IP, or protocol.
 
 ---
 ## Final Outcome
 
 By combining **VPN-based traffic control**, **transparent iptables redirection**, and **Frida-based Flutter instrumentation**, full HTTPS interception was achieved without modifying the APK or affecting app stability.
 
-This setup forces all Flutter traffic through Burp, bypasses native BoringSSL certificate verification, and redirects socket connections at runtime—working even when proxy settings and standard pinning bypasses fail.
-
-### Key Takeaways
-
-- **Routing control matters more than pinning bypass**
-    
-- Flutter networking ≠ Android networking
-    
-- Socket-level hooks are more reliable than proxy-based techniques
-    
-- Layered attacks are essential for modern Flutter apps
-    
+This setup forces all Flutter traffic through Burp, bypasses native BoringSSL certificate verification, and redirects socket connections at runtime working even when proxy settings and standard pinning bypasses fail.
 
 ### When to Use This
 
