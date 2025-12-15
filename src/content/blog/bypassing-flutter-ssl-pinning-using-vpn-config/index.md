@@ -1,6 +1,7 @@
 ---
 title: Bypassing Flutter SSL Pinning Using VPN Config
 date: "2025-12-15"
+summary: ""
 draft: false
 tags: ["android"]
 ---
