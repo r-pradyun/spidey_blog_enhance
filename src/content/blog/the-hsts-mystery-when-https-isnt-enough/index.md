@@ -1,8 +1,9 @@
 ---
 title: "The HSTS Mystery - When HTTPS Isn't Enough"
-date: "2026-01-12"
+summary: ""
+date: "Jan 0912 2026"
 draft: false
-tags: []
+tags: [Web]
 ---
 
 
