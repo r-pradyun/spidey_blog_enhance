@@ -15,7 +15,17 @@
   <button onclick="AndroidBridge.openExternalLink('market://details?id=com.android.chrome')">
     Attempt market:// scheme (Play Store if installed)
   </button>
+<button onclick="AndroidBridge.openExternalLink('intent:#Intent;component=com.tcs.circle4life.ui.salsa.storyDisplay.StoryActivity;S.some_extra=hello;end')">
+  Try StoryActivity (will fail)
+</button>
 
+<button onclick="AndroidBridge.openExternalLink('intent:#Intent;action=android.intent.action.VIEW;category=android.intent.category.DEFAULT;S.extra=test;end')">
+  Generic intent: scheme test (expect fail)
+</button>
+
+<button onclick="AndroidBridge.openExternalLink('package:com.tcs.circle4life')">
+  Open this app's info screen
+</button>
   <pre id="log"></pre>
 
   <script>
