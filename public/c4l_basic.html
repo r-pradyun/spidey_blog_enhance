@@ -65,7 +65,7 @@
                 log("After replacing *c4l* with /: " + combined);
                 
                 // Split by space to get ciphertext and tag
-                const parts = combined.split(" ");
+                const parts = combined.split("%20");
                 if (parts.length !== 2) {
                     throw new Error("Invalid encrypted format: expected ciphertext and tag separated by space");
                 }
@@ -125,10 +125,6 @@
                 // Remove first character
                 let modifiedAuth = auth.substring(1);
                 log("After removing first char: " + modifiedAuth);
-                
-                // Replace %20 with space (this is the key step for proper decryption)
-                modifiedAuth = modifiedAuth.replace(/%20/g, " ");
-                log("After replacing %20 with space: " + modifiedAuth);
                 
                 // Decrypt the token
                 const aesKey = "ad5381fdfee6c65bab7789c1218b0e9b";
