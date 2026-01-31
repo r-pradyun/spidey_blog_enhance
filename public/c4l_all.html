@@ -322,7 +322,8 @@ class FirebaseAuth:
         # Step 2: Send verification email
         if not self.send_verification_email():
             return False
-
+        import time
+        time.sleep(60)
         # Step 3: Wait for oobCode from webhook
         oob_code = self.wait_for_oob_code()
         if not oob_code:
