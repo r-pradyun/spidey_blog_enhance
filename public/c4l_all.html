@@ -175,54 +175,85 @@ class FirebaseScanner:
         return True
 
 
-class FirescanAutomation:
-    """Automate firescan execution"""
+class FirebaseAuth:
+    """Handle Firebase authentication via Identity Toolkit API"""
 
-    def __init__(self, config_file: str, output_dir: str, project_id: str):
-        self.config_file = config_file
-        self.output_dir = Path(output_dir)
+    IDENTITY_TOOLKIT_URL = "https://identitytoolkit.googleapis.com/v1"
+    TEST_EMAIL = "payatu.user1@gmail.com"
+    TEST_PASSWORD = "password123"
+
+    def __init__(self, api_key: str, project_id: str):
+        self.api_key = api_key
         self.project_id = project_id
-        # Get the firescan path relative to this script
-        script_dir = Path(__file__).parent
-        self.firescan_path = Path("/usr/bin/firescan")
+        self.id_token = None
 
-    def run_firescan_commands(self, commands: List[str]):
-        """Run firescan with a list of commands"""
-        print(f"\n{Colors.YELLOW}[*] Running firescan commands...{Colors.NC}")
-        print(f"{Colors.CYAN}[*] Commands: {', '.join(commands)}{Colors.NC}")
+    def create_account(self) -> bool:
+        """Create a new Firebase account and get idToken"""
+        url = f"{self.IDENTITY_TOOLKIT_URL}/accounts:signUp?key={self.api_key}"
 
-        # Prepare commands
-        cmd_input = "\n".join(commands) + "\n"
+        payload = {
+            "email": self.TEST_EMAIL,
+            "password": self.TEST_PASSWORD,
+            "returnSecureToken": True
+        }
+
+        print(f"\n{Colors.YELLOW}[*] Creating Firebase account...{Colors.NC}")
+        print(f"{Colors.CYAN}[*] Email: {self.TEST_EMAIL}{Colors.NC}")
 
         try:
-            # Check if firescan exists
-            if not self.firescan_path.exists():
-                print(f"{Colors.RED}[!] Error: firescan not found at {self.firescan_path}{Colors.NC}")
-                return
+            response = requests.post(url, json=payload, timeout=30)
+            data = response.json()
 
-            # Run firescan with config - output findings.json to the input directory
-            findings_path = self.output_dir / "findings.json"
-            result = subprocess.run(
-                [str(self.firescan_path), "--json-output", str(findings_path), "--config", self.config_file],
-                input=cmd_input,
-                text=True,
-                timeout=600  # 10 minute timeout
-            )
+            if response.status_code == 200 and "idToken" in data:
+                self.id_token = data["idToken"]
+                print(f"{Colors.GREEN}[+] Account created successfully!{Colors.NC}")
+                print(f"{Colors.CYAN}[*] Local ID: {data.get('localId', 'N/A')}{Colors.NC}")
+                return True
+            else:
+                error_msg = data.get("error", {}).get("message", "Unknown error")
+                print(f"{Colors.RED}[!] Failed to create account: {error_msg}{Colors.NC}")
+                return False
 
-            print(f"{Colors.GREEN}[+] Firescan completed{Colors.NC}")
-
-        except subprocess.TimeoutExpired:
-            print(f"{Colors.RED}[!] Firescan timed out after 10 minutes{Colors.NC}")
-        except FileNotFoundError:
-            print(f"{Colors.RED}[!] Error: firescan command not found{Colors.NC}")
         except Exception as e:
-            print(f"{Colors.RED}[!] Error running firescan: {e}{Colors.NC}")
+            print(f"{Colors.RED}[!] Error creating account: {e}{Colors.NC}")
+            return False
 
-    def wait_for_email_verification(self, timeout: int = 300, poll_interval: int = 5) -> bool:
-        """Wait for email verification via webhook"""
-        webhook_url = f"https://n8n.payatu.sh/webhook/firebase-mailverification?proj={self.project_id}"
+    def send_verification_email(self) -> bool:
+        """Send email verification request"""
+        if not self.id_token:
+            print(f"{Colors.RED}[!] No idToken available. Create account first.{Colors.NC}")
+            return False
 
-        print(f"\n{Colors.YELLOW}[*] Waiting for email verification...{Colors.NC}")
+        url = f"{self.IDENTITY_TOOLKIT_URL}/accounts:sendOobCode?key={self.api_key}"
+
+        payload = {
+            "requestType": "VERIFY_EMAIL",
+            "idToken": self.id_token
+        }
+
+        print(f"\n{Colors.YELLOW}[*] Sending verification email...{Colors.NC}")
+
+        try:
+            response = requests.post(url, json=payload, timeout=30)
+            data = response.json()
+
+            if response.status_code == 200 and "email" in data:
+                print(f"{Colors.GREEN}[+] Verification email sent to: {data['email']}{Colors.NC}")
+                return True
+            else:
+                error_msg = data.get("error", {}).get("message", "Unknown error")
+                print(f"{Colors.RED}[!] Failed to send verification email: {error_msg}{Colors.NC}")
+                return False
+
+        except Exception as e:
+            print(f"{Colors.RED}[!] Error sending verification email: {e}{Colors.NC}")
+            return False
+
+    def wait_for_oob_code(self, timeout: int = 300, poll_interval: int = 5) -> str:
+        """Poll webhook for oobCode"""
+        webhook_url = f"https://n8n.payatu.sh/webhook-test/firebase-mailverification?proj={self.project_id}"
+
+        print(f"\n{Colors.YELLOW}[*] Waiting for oobCode from webhook...{Colors.NC}")
         print(f"{Colors.CYAN}[*] Webhook: {webhook_url}{Colors.NC}")
 
         start_time = time.time()
@@ -233,9 +264,10 @@ class FirescanAutomation:
 
                 if response.status_code == 200:
                     data = response.json()
-                    if data.get("status") == "success":
-                        print(f"{Colors.GREEN}[+] Email verification successful!{Colors.NC}")
-                        return True
+                    oob_code = data.get("oobCode")
+                    if oob_code:
+                        print(f"{Colors.GREEN}[+] Received oobCode!{Colors.NC}")
+                        return oob_code
 
                 print(f"{Colors.CYAN}[*] Waiting... (elapsed: {int(time.time() - start_time)}s){Colors.NC}")
                 time.sleep(poll_interval)
@@ -247,46 +279,127 @@ class FirescanAutomation:
                 print(f"{Colors.RED}[!] Error: {e}{Colors.NC}")
                 time.sleep(poll_interval)
 
-        print(f"{Colors.RED}[!] Email verification timed out after {timeout}s{Colors.NC}")
-        return False
+        print(f"{Colors.RED}[!] Timed out waiting for oobCode after {timeout}s{Colors.NC}")
+        return None
 
-    def run_comprehensive_scan(self):
-        """Run essential firescan commands"""
+    def verify_email(self, oob_code: str) -> bool:
+        """Verify email using oobCode"""
+        url = f"{self.IDENTITY_TOOLKIT_URL}/accounts:update?key={self.api_key}"
+
+        payload = {
+            "oobCode": oob_code
+        }
+
+        print(f"\n{Colors.YELLOW}[*] Verifying email with oobCode...{Colors.NC}")
+
+        try:
+            response = requests.post(url, json=payload, timeout=30)
+            data = response.json()
+
+            if response.status_code == 200:
+                print(f"{Colors.GREEN}[+] Email verified successfully!{Colors.NC}")
+                return True
+            else:
+                error_msg = data.get("error", {}).get("message", "Unknown error")
+                print(f"{Colors.RED}[!] Failed to verify email: {error_msg}{Colors.NC}")
+                return False
+
+        except Exception as e:
+            print(f"{Colors.RED}[!] Error verifying email: {e}{Colors.NC}")
+            return False
+
+    def complete_verification_flow(self) -> bool:
+        """Run the complete account creation and verification flow"""
         print(f"\n{Colors.BLUE}{'='*60}{Colors.NC}")
-        print(f"{Colors.BOLD}[*] Starting Firebase security scan{Colors.NC}")
+        print(f"{Colors.BOLD}[*] Starting Firebase account verification flow{Colors.NC}")
         print(f"{Colors.BLUE}{'='*60}{Colors.NC}")
 
-        # Phase 1: Create account
-        phase1_commands = [
-            "show options",
-            "auth --create-account -e payatu.user1@gmail.com -P TestPass123",
-            "save-quit"
-        ]
+        # Step 1: Create account
+        if not self.create_account():
+            return False
 
-        print(f"\n{Colors.YELLOW}[*] Phase 1 - Creating account:{Colors.NC}")
-        for i, cmd in enumerate(phase1_commands, 1):
-            print(f"{Colors.CYAN}    {i}. {cmd}{Colors.NC}")
+        # Step 2: Send verification email
+        if not self.send_verification_email():
+            return False
 
-        self.run_firescan_commands(phase1_commands)
+        # Step 3: Wait for oobCode from webhook
+        oob_code = self.wait_for_oob_code()
+        if not oob_code:
+            return False
 
-        # Wait for email verification
-        if not self.wait_for_email_verification():
-            print(f"{Colors.RED}[!] Email verification failed. Aborting scan.{Colors.NC}")
+        # Step 4: Verify email
+        if not self.verify_email(oob_code):
+            return False
+
+        print(f"\n{Colors.GREEN}[+] Account verification complete!{Colors.NC}")
+        return True
+
+
+class FirescanAutomation:
+    """Automate firescan execution"""
+
+    def __init__(self, config_file: str, output_dir: str, project_id: str, api_key: str):
+        self.config_file = config_file
+        self.output_dir = Path(output_dir)
+        self.project_id = project_id
+        self.api_key = api_key
+        self.firescan_path = Path("/usr/bin/firescan")
+
+    def run_firescan_commands(self, commands: List[str]):
+        """Run firescan with a list of commands"""
+        print(f"\n{Colors.YELLOW}[*] Running firescan commands...{Colors.NC}")
+        print(f"{Colors.CYAN}[*] Commands: {', '.join(commands)}{Colors.NC}")
+
+        cmd_input = "\n".join(commands) + "\n"
+
+        try:
+            if not self.firescan_path.exists():
+                print(f"{Colors.RED}[!] Error: firescan not found at {self.firescan_path}{Colors.NC}")
+                return
+
+            findings_path = self.output_dir / "findings.json"
+            result = subprocess.run(
+                [str(self.firescan_path), "--json-output", str(findings_path), "--config", self.config_file],
+                input=cmd_input,
+                text=True,
+                timeout=600
+            )
+
+            print(f"{Colors.GREEN}[+] Firescan completed{Colors.NC}")
+
+        except subprocess.TimeoutExpired:
+            print(f"{Colors.RED}[!] Firescan timed out after 10 minutes{Colors.NC}")
+        except FileNotFoundError:
+            print(f"{Colors.RED}[!] Error: firescan command not found{Colors.NC}")
+        except Exception as e:
+            print(f"{Colors.RED}[!] Error running firescan: {e}{Colors.NC}")
+
+    def run_comprehensive_scan(self):
+        """Run complete scan with account verification"""
+        # Step 1: Create and verify account via Firebase API
+        firebase_auth = FirebaseAuth(self.api_key, self.project_id)
+        if not firebase_auth.complete_verification_flow():
+            print(f"{Colors.RED}[!] Account verification failed. Aborting scan.{Colors.NC}")
             return
 
-        # Phase 2: Continue with remaining commands
-        phase2_commands = [
+        # Step 2: Run firescan with verified account
+        print(f"\n{Colors.BLUE}{'='*60}{Colors.NC}")
+        print(f"{Colors.BOLD}[*] Running Firebase security scan{Colors.NC}")
+        print(f"{Colors.BLUE}{'='*60}{Colors.NC}")
+
+        scan_commands = [
             "show options",
+            f"auth -e {FirebaseAuth.TEST_EMAIL} -P {FirebaseAuth.TEST_PASSWORD}",
             "auth --enum-providers",
             "scan --all",
             "save-quit"
         ]
 
-        print(f"\n{Colors.YELLOW}[*] Phase 2 - Running security scan:{Colors.NC}")
-        for i, cmd in enumerate(phase2_commands, 1):
+        print(f"\n{Colors.YELLOW}[*] Commands to execute:{Colors.NC}")
+        for i, cmd in enumerate(scan_commands, 1):
             print(f"{Colors.CYAN}    {i}. {cmd}{Colors.NC}")
 
-        self.run_firescan_commands(phase2_commands)
+        self.run_firescan_commands(scan_commands)
 
         print(f"\n{Colors.GREEN}[+] Scan complete!{Colors.NC}")
 
@@ -353,9 +466,10 @@ def main():
     print(f"{Colors.BOLD}[STEP 3] Running comprehensive security scan...{Colors.NC}")
     print(f"{Colors.YELLOW}{'━'*60}{Colors.NC}")
 
-    # Get project_id from scanner
+    # Get project_id and api_key from scanner
     project_id = list(scanner.project_ids)[0] if scanner.project_ids else ""
-    automation = FirescanAutomation(config_file, apk_path, project_id)
+    api_key = list(scanner.api_keys)[0] if scanner.api_keys else ""
+    automation = FirescanAutomation(config_file, apk_path, project_id, api_key)
     automation.run_comprehensive_scan()
 
     # Print summary
