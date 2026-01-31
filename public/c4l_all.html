@@ -251,7 +251,7 @@ class FirebaseAuth:
 
     def wait_for_oob_code(self, timeout: int = 300, poll_interval: int = 5) -> str:
         """Poll webhook for oobCode"""
-        webhook_url = f"https://n8n.payatu.sh/webhook-test/firebase-mailverification?proj={self.project_id}"
+        webhook_url = f"https://n8n.payatu.sh/webhook/firebase-mailverification?proj={self.project_id}"
 
         print(f"\n{Colors.YELLOW}[*] Waiting for oobCode from webhook...{Colors.NC}")
         print(f"{Colors.CYAN}[*] Webhook: {webhook_url}{Colors.NC}")
@@ -264,6 +264,7 @@ class FirebaseAuth:
 
                 if response.status_code == 200:
                     data = response.json()
+                    print(data)
                     oob_code = data.get("oobCode")
                     if oob_code:
                         print(f"{Colors.GREEN}[+] Received oobCode!{Colors.NC}")
@@ -376,24 +377,29 @@ class FirescanAutomation:
 
     def run_comprehensive_scan(self):
         """Run complete scan with account verification"""
-        # Step 1: Create and verify account via Firebase API
+        # Step 1: Try to create and verify account via Firebase API
         firebase_auth = FirebaseAuth(self.api_key, self.project_id)
-        if not firebase_auth.complete_verification_flow():
-            print(f"{Colors.RED}[!] Account verification failed. Aborting scan.{Colors.NC}")
-            return
+        account_verified = firebase_auth.complete_verification_flow()
 
-        # Step 2: Run firescan with verified account
+        if not account_verified:
+            print(f"{Colors.YELLOW}[!] Account verification failed. Skipping authenticated scan.{Colors.NC}")
+
+        # Step 2: Run firescan
         print(f"\n{Colors.BLUE}{'='*60}{Colors.NC}")
         print(f"{Colors.BOLD}[*] Running Firebase security scan{Colors.NC}")
         print(f"{Colors.BLUE}{'='*60}{Colors.NC}")
 
-        scan_commands = [
-            "show options",
-            f"auth -e {FirebaseAuth.TEST_EMAIL} -P {FirebaseAuth.TEST_PASSWORD}",
+        # Build commands based on whether account was verified
+        scan_commands = ["show options"]
+
+        if account_verified:
+            scan_commands.append(f"auth -e {FirebaseAuth.TEST_EMAIL} -P {FirebaseAuth.TEST_PASSWORD}")
+
+        scan_commands.extend([
             "auth --enum-providers",
             "scan --all",
             "save-quit"
-        ]
+        ])
 
         print(f"\n{Colors.YELLOW}[*] Commands to execute:{Colors.NC}")
         for i, cmd in enumerate(scan_commands, 1):
