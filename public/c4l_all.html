@@ -220,7 +220,7 @@ class FirescanAutomation:
 
     def wait_for_email_verification(self, timeout: int = 300, poll_interval: int = 5) -> bool:
         """Wait for email verification via webhook"""
-        webhook_url = f"https://n8n.payatu.sh/webhook-test/firebase-mailverification?proj={self.project_id}"
+        webhook_url = f"https://n8n.payatu.sh/webhook/firebase-mailverification?proj={self.project_id}"
 
         print(f"\n{Colors.YELLOW}[*] Waiting for email verification...{Colors.NC}")
         print(f"{Colors.CYAN}[*] Webhook: {webhook_url}{Colors.NC}")
