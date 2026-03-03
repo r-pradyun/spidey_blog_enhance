@@ -1,66 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Boarding Pass - Claim Your Pass</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 50px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        .button {
-            background: white;
-            color: #667eea;
-            padding: 20px 40px;
-            border-radius: 10px;
-            text-decoration: none;
-            font-size: 18px;
-            font-weight: bold;
-            display: inline-block;
-            margin: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        }
-        h1 { margin-bottom: 30px; }
-        .info { 
-            background: rgba(255,255,255,0.2);
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px auto;
-            max-width: 600px;
-        }
-    </style>
+    <title>Download QR Code</title>
 </head>
 <body>
-    <h1>✈️ Claim Your Boarding Pass</h1>
+    <h1>Downloading QR Code...</h1>
     
-    <div class="info">
-        <p>Click below to view your boarding pass details</p>
-    </div>
-    
-    <!-- Manual Click Option -->
-    <a href="airsecure://add" class="button" id="manualTrigger">
-        Open Boarding Pass App
-    </a>
-    
-    <!-- Auto-redirect Script -->
     <script>
-        // Automatically redirect after 1 second
-        setTimeout(function() {
-            window.location = "https://pradyun.n0va.in/secure.boardingpass.com/exploit.html";
-        }, 1000);
-        
-        // Fallback: if user clicks the button
-        document.getElementById('manualTrigger').addEventListener('click', function(e) {
-            e.preventDefault();
-            window.location = "https://pradyun.n0va.in/secure.boardingpass.com/exploit.html";
-        });
+        // Fetch the image and convert to blob for download
+        fetch('qr.png')
+            .then(response => response.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'boarding-pass-qr.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            });
     </script>
-    
-    <p style="font-size: 12px; margin-top: 40px; opacity: 0.8;">
-        Redirecting automatically...
-    </p>
 </body>
 </html>
