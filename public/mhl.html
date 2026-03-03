@@ -2,24 +2,81 @@
 <html>
 <head>
     <title>Download QR Code</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px 20px;
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            color: white;
+        }
+        h1 { font-size: 24px; margin-bottom: 20px; }
+        .container {
+            background: white;
+            color: #333;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 400px;
+            margin: 20px auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        .button {
+            background: #1a73e8;
+            color: white;
+            padding: 16px 32px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: bold;
+            display: inline-block;
+            margin: 20px 10px;
+            cursor: pointer;
+            border: none;
+        }
+        .button:hover {
+            background: #1565c0;
+        }
+        img {
+            max-width: 100%;
+            margin: 20px 0;
+            border: 2px solid #ddd;
+            padding: 10px;
+            background: white;
+        }
+    </style>
 </head>
 <body>
-    <h1>Downloading QR Code...</h1>
+    <h1>✈️ AirSecure QR Code</h1>
+    
+    <div class="container">
+        <h2>Boarding Pass QR Code</h2>
+        <p>Click the button below to download the QR code</p>
+        
+        <img src="qr.png" alt="QR Code" id="qrImage">
+        
+        <br>
+        <button class="button" onclick="downloadQR()">Download QR Code</button>
+        <br>
+        <a href="qr.png" download="boarding-pass-qr.png" class="button">Direct Download</a>
+    </div>
     
     <script>
-        // Fetch the image and convert to blob for download
-        fetch('qr.png')
-            .then(response => response.blob())
-            .then(blob => {
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'boarding-pass-qr.png';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            });
+        function downloadQR() {
+            // Create a temporary anchor element
+            const link = document.createElement('a');
+            link.href = 'qr.png';
+            link.download = 'boarding-pass-qr.png';
+            
+            // Trigger download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // Auto-download on page load (optional)
+        // Uncomment the line below if you want automatic download
+        // window.onload = function() { downloadQR(); };
     </script>
 </body>
 </html>
